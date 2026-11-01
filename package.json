@@ -1,0 +1,21 @@
+{
+  "id": "./",
+  "name": "MySpotify – Deine Musik",
+  "short_name": "MySpotify",
+  "description": "Deine persönliche Musikbibliothek – lokal und optional mit Google Drive synchronisiert.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#101010",
+  "theme_color": "#101010",
+  "categories": ["music", "entertainment"],
+  "icons": [
+    {
+      "src": "assets/images/icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

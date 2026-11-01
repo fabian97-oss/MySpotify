@@ -1,20 +1,154 @@
-{
-    "id": "./",
-    "name": "MySpotify",
-    "short_name": "MySpotify",
-    "description": "Dein persönlicher Musikplayer",
-    "start_url": "./",
-    "scope": "./",
-    "display": "standalone",
-    "orientation": "any",
-    "background_color": "#121212",
-    "theme_color": "#121212",
-    "icons": [
-        {
-            "src": "assets/images/icon.png",
-            "sizes": "512x512",
-            "type": "image/png",
-            "purpose": "any"
-        }
-    ]
-}
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#101010">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="MySpotify">
+  <meta name="description" content="Deine persönliche Musikbibliothek – lokal und optional mit Google Drive synchronisiert.">
+  <title>MySpotify – Deine Musik</title>
+  <link rel="icon" type="image/png" href="assets/images/icon.png">
+  <link rel="apple-touch-icon" href="assets/images/icon.png">
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="header">
+    <a class="brand" href="#home" aria-label="MySpotify Startseite">
+      <span class="brand-mark">♫</span>
+      <span>MySpotify</span>
+    </a>
+    <div class="header-right">
+      <span class="private-label"><span class="status-dot"></span> Private Bibliothek</span>
+    </div>
+  </header>
+
+  <main class="main-content" id="home">
+    <section class="welcome-section">
+      <div>
+        <p class="eyebrow">DEINE MUSIK. DEINE REGELN.</p>
+        <h1>Deine Bibliothek</h1>
+        <p class="welcome-copy">Lokal gespeichert, jederzeit bereit.</p>
+      </div>
+      <div class="welcome-note">🎧 <span>Persönlicher Musikplayer</span></div>
+    </section>
+
+    <section class="library-tools" aria-label="Bibliothek steuern">
+      <label class="search-wrap" for="search-input">
+        <span aria-hidden="true">⌕</span>
+        <input id="search-input" type="search" placeholder="Songs und Playlists suchen …" autocomplete="off">
+      </label>
+      <div class="filter-group">
+        <button id="show-all-button" class="filter-button active" type="button" aria-pressed="true">Alle Songs</button>
+        <button id="show-favorites-button" class="filter-button" type="button" aria-pressed="false">♥ Favoriten</button>
+      </div>
+      <button id="create-playlist-button" class="primary-button" type="button">＋ Playlist erstellen</button>
+    </section>
+
+    <section class="music-section" aria-labelledby="section-title">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">DEINE SAMMLUNG</p>
+          <h2 id="section-title">Deine Musik</h2>
+          <p id="library-count" class="muted-text">0 Songs in deiner Bibliothek</p>
+        </div>
+        <label class="sort-wrap" for="sort-select">
+          <span>Sortieren:</span>
+          <select id="sort-select">
+            <option value="name">Titel (A–Z)</option>
+            <option value="newest">Neueste zuerst</option>
+            <option value="oldest">Älteste zuerst</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="source-tools">
+        <label for="music-upload" class="upload-button">＋ Songs hinzufügen</label>
+        <input type="file" id="music-upload" accept="audio/*,.mp3,.wav,.ogg,.m4a,.aac,.flac,.opus,.aiff,.wma" multiple hidden>
+        <button type="button" id="google-connect-button" class="drive-button">☁ Mit Google Drive verbinden</button>
+      </div>
+      <p id="upload-status" class="status" role="status" aria-live="polite">Deine Musik wird lokal gespeichert. Google Drive ist optional.</p>
+
+      <section class="playlist-section" aria-labelledby="playlist-heading">
+        <div class="subsection-heading">
+          <h3 id="playlist-heading">Playlists</h3>
+        </div>
+        <div id="playlist-list" class="playlist-grid"></div>
+      </section>
+
+      <section class="songs-section" aria-labelledby="songs-heading">
+        <div class="subsection-heading">
+          <h3 id="songs-heading">Songs</h3>
+          <span class="muted-text">Wähle einen Titel zum Abspielen</span>
+        </div>
+        <div id="song-list" class="song-list">
+          <div class="empty-music"><span>🎶</span><h3>Noch keine Musik vorhanden</h3><p>Füge deine eigenen Songs hinzu.</p></div>
+        </div>
+      </section>
+
+      <section class="queue-section" aria-labelledby="queue-heading">
+        <div class="subsection-heading">
+          <h3 id="queue-heading">Als Nächstes</h3>
+          <span class="muted-text">Wiedergabewarteschlange</span>
+        </div>
+        <div id="queue-list" class="queue-list"><p class="queue-empty">Starte einen Song, um die Warteschlange zu füllen.</p></div>
+      </section>
+    </section>
+
+    <footer class="app-footer">
+      <p>MySpotify speichert deine Musik in diesem Browser. Google Drive synchronisiert deine Bibliothek optional zwischen deinen eigenen Geräten.</p>
+    </footer>
+  </main>
+
+  <section class="music-player" aria-label="Musikplayer">
+    <div class="current-song">
+      <img id="player-cover" class="player-cover" alt="" hidden>
+      <div id="player-cover-placeholder" class="player-cover player-cover-placeholder">♫</div>
+      <div class="song-info">
+        <strong id="current-title">Kein Song ausgewählt</strong>
+        <span id="current-artist">MySpotify</span>
+      </div>
+    </div>
+    <div class="player-center">
+      <div class="control-buttons">
+        <button id="shuffle-btn" class="secondary-control" type="button" aria-label="Zufallswiedergabe" aria-pressed="false" title="Zufallswiedergabe einschalten">⤨</button>
+        <button id="previous-btn" type="button" aria-label="Vorheriger Song" title="Vorheriger Song">⏮</button>
+        <button id="play-btn" class="play-button" type="button" aria-label="Abspielen" title="Abspielen / Pause">▶</button>
+        <button id="next-btn" type="button" aria-label="Nächster Song" title="Nächster Song">⏭</button>
+        <button id="repeat-btn" class="secondary-control" type="button" aria-label="Wiederholung" aria-pressed="false" title="Wiederholung einschalten">🔁</button>
+      </div>
+      <div class="progress-container">
+        <span id="current-time">0:00</span>
+        <input type="range" id="progress" min="0" max="100" value="0" aria-label="Wiedergabeposition">
+        <span id="duration">0:00</span>
+      </div>
+    </div>
+    <div class="volume-control">
+      <span aria-hidden="true">🔊</span>
+      <input type="range" id="volume" min="0" max="1" step="0.01" value="0.7" aria-label="Lautstärke">
+    </div>
+  </section>
+
+  <audio id="audio-player" preload="metadata"></audio>
+
+  <nav class="bottom-navigation" aria-label="Hauptnavigation">
+    <button id="nav-home" type="button"><span aria-hidden="true">⌂</span><span>Start</span></button>
+    <button id="nav-search" type="button"><span aria-hidden="true">⌕</span><span>Suche</span></button>
+    <button id="nav-library" type="button"><span aria-hidden="true">♫</span><span>Mediathek</span></button>
+  </nav>
+
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script type="module" src="js/app.js"></script>
+  <script>
+    if ("serviceWorker" in navigator && location.protocol !== "file:") {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("./sw.js")
+          .then(registration => registration.update().catch(() => {}))
+          .catch(error => console.error("Service Worker Fehler:", error));
+      });
+    }
+  </script>
+</body>
+</html>

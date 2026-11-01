@@ -1,2 +1,10 @@
-# MySpotify
-My own music streaming app
+{
+  "name": "myspotify-personal-library",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Persönlicher lokaler Musikplayer mit optionaler Google-Drive-Synchronisierung",
+  "scripts": {
+    "test": "node --test"
+  }
+}
