@@ -1,6 +1,6 @@
 
 /* =====================================
-   MYSPOTIFY - MUSIKPLAYER MIT SPEICHERUNG
+   MYSPOTIFY - MUSIKPLAYER MIT CLOUD-SYNC
 ===================================== */
 
 const audio = document.getElementById("audio-player");
@@ -33,7 +33,6 @@ let database = null;
 
 function openDatabase() {
     return new Promise((resolve, reject) => {
-
         if (!("indexedDB" in window)) {
             reject(new Error("Dieser Browser unterstützt keine lokale Musikdatenbank."));
             return;
@@ -69,7 +68,6 @@ function openDatabase() {
 
 function loadSongsFromDatabase() {
     return new Promise((resolve, reject) => {
-
         const transaction = database.transaction(["songs"], "readonly");
         const store = transaction.objectStore("songs");
         const request = store.getAll();
@@ -90,10 +88,29 @@ function loadSongsFromDatabase() {
 
 function saveSongToDatabase(song) {
     return new Promise((resolve, reject) => {
-
         const transaction = database.transaction(["songs"], "readwrite");
         const store = transaction.objectStore("songs");
         const request = store.add(song);
+
+        request.onsuccess = () => {
+            resolve(request.result);
+        };
+
+        request.onerror = () => {
+            reject(request.error);
+        };
+    });
+}
+
+/* =====================================
+   SONG IN DER DATENBANK AKTUALISIEREN
+===================================== */
+
+function updateSongInDatabase(song) {
+    return new Promise((resolve, reject) => {
+        const transaction = database.transaction(["songs"], "readwrite");
+        const store = transaction.objectStore("songs");
+        const request = store.put(song);
 
         request.onsuccess = () => {
             resolve(request.result);
@@ -133,7 +150,6 @@ uploadButton.addEventListener("click", () => {
 ===================================== */
 
 upload.addEventListener("change", async (event) => {
-
     const files = Array.from(event.target.files);
 
     if (files.length === 0) {
@@ -146,7 +162,6 @@ upload.addEventListener("change", async (event) => {
     let savedCount = 0;
 
     for (const file of files) {
-
         const isAudio = file.type.startsWith("audio/") ||
             /\.(mp3|wav|ogg|m4a|aac|flac)$/i.test(file.name);
 
@@ -173,9 +188,17 @@ upload.addEventListener("change", async (event) => {
 
     await refreshSongs();
 
-    uploadStatus.textContent = savedCount > 0
-        ? `${savedCount} Song(s) wurden dauerhaft gespeichert.`
-        : "Es konnten keine Songs gespeichert werden.";
+    if (savedCount > 0) {
+        uploadStatus.textContent =
+            `${savedCount} Song(s) wurden lokal gespeichert.`;
+
+        // Neue Songs zusätzlich mit Google Drive synchronisieren.
+        if (window.MySpotifyDrive?.isConnected()) {
+            await window.MySpotifyDrive.synchronizeSongs();
+        }
+    } else {
+        uploadStatus.textContent = "Es konnten keine Songs gespeichert werden.";
+    }
 });
 
 /* =====================================
@@ -183,7 +206,6 @@ upload.addEventListener("change", async (event) => {
 ===================================== */
 
 async function refreshSongs() {
-
     try {
         const storedSongs = await loadSongsFromDatabase();
 
@@ -205,11 +227,9 @@ async function refreshSongs() {
 ===================================== */
 
 function renderSongs() {
-
     songList.innerHTML = "";
 
     if (songs.length === 0) {
-
         songList.innerHTML = `
             <div class="empty-music">
                 <span>🎶</span>
@@ -222,7 +242,6 @@ function renderSongs() {
     }
 
     songs.forEach((song, index) => {
-
         const item = document.createElement("div");
 
         item.className = "song-item";
@@ -257,7 +276,6 @@ function renderSongs() {
 ===================================== */
 
 async function playSong(index) {
-
     if (index < 0 || index >= songs.length) {
         return;
     }
@@ -287,9 +305,7 @@ async function playSong(index) {
 ===================================== */
 
 playButton.addEventListener("click", async () => {
-
     if (currentSongIndex === -1) {
-
         if (songs.length > 0) {
             await playSong(0);
         }
@@ -298,19 +314,15 @@ playButton.addEventListener("click", async () => {
     }
 
     if (audio.paused) {
-
         try {
             await audio.play();
             playButton.textContent = "Ⅱ";
         } catch (error) {
             console.error("Wiedergabe fehlgeschlagen:", error);
         }
-
     } else {
-
         audio.pause();
         playButton.textContent = "▶";
-
     }
 });
 
@@ -319,7 +331,6 @@ playButton.addEventListener("click", async () => {
 ===================================== */
 
 previousButton.addEventListener("click", () => {
-
     if (songs.length === 0) {
         return;
     }
@@ -340,7 +351,6 @@ previousButton.addEventListener("click", () => {
 ===================================== */
 
 nextButton.addEventListener("click", () => {
-
     if (songs.length === 0) {
         return;
     }
@@ -355,17 +365,11 @@ nextButton.addEventListener("click", () => {
 ===================================== */
 
 audio.addEventListener("ended", () => {
-
     if (songs.length > 1) {
-
         const nextIndex = (currentSongIndex + 1) % songs.length;
-
         playSong(nextIndex);
-
     } else {
-
         playButton.textContent = "▶";
-
     }
 });
 
@@ -374,15 +378,12 @@ audio.addEventListener("ended", () => {
 ===================================== */
 
 audio.addEventListener("timeupdate", () => {
-
     if (!Number.isFinite(audio.duration)) {
         return;
     }
 
     progress.value = (audio.currentTime / audio.duration) * 100;
-
     currentTime.textContent = formatTime(audio.currentTime);
-
 });
 
 /* =====================================
@@ -390,13 +391,9 @@ audio.addEventListener("timeupdate", () => {
 ===================================== */
 
 audio.addEventListener("loadedmetadata", () => {
-
     duration.textContent = formatTime(audio.duration);
-
     currentTime.textContent = "0:00";
-
     progress.value = 0;
-
 });
 
 /* =====================================
@@ -404,13 +401,9 @@ audio.addEventListener("loadedmetadata", () => {
 ===================================== */
 
 progress.addEventListener("input", () => {
-
     if (Number.isFinite(audio.duration)) {
-
         audio.currentTime = (progress.value / 100) * audio.duration;
-
     }
-
 });
 
 /* =====================================
@@ -424,13 +417,58 @@ volume.addEventListener("input", () => {
 audio.volume = 0.7;
 
 /* =====================================
+   GOOGLE DRIVE: MUSIKFUNKTIONEN
+===================================== */
+
+window.MySpotifyMusic = {
+    getStoredSongs: async () => {
+        return await loadSongsFromDatabase();
+    },
+
+    setDriveFileId: async (songId, driveFileId) => {
+        const storedSongs = await loadSongsFromDatabase();
+
+        const song = storedSongs.find(item => item.id === songId);
+
+        if (!song) {
+            throw new Error("Lokaler Song wurde nicht gefunden.");
+        }
+
+        song.driveFileId = driveFileId;
+
+        await updateSongInDatabase(song);
+    },
+
+    saveDownloadedSong: async (song) => {
+        return await saveSongToDatabase(song);
+    },
+
+    refresh: async () => {
+        await refreshSongs();
+    }
+};
+
+/* =====================================
+   GOOGLE DRIVE: VERBINDUNG ERKANNT
+===================================== */
+
+window.addEventListener("myspotify-drive-connected", async () => {
+    if (!database) {
+        uploadStatus.textContent =
+            "Musikdatenbank wird noch geladen. Bitte gleich erneut verbinden.";
+
+        return;
+    }
+
+    await window.MySpotifyDrive.synchronizeSongs();
+});
+
+/* =====================================
    APP STARTEN
 ===================================== */
 
 async function initializeApp() {
-
     try {
-
         uploadStatus.textContent = "Gespeicherte Musik wird geladen ...";
 
         await openDatabase();
@@ -441,7 +479,6 @@ async function initializeApp() {
             : "Deine Musik wird automatisch gespeichert.";
 
     } catch (error) {
-
         console.error("Datenbankfehler:", error);
 
         uploadStatus.textContent =
