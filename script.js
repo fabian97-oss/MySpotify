@@ -320,5 +320,9 @@ async function initializeApp() {
     console.error("Startfehler:", error); statusText.textContent = `App konnte nicht gestartet werden: ${error.message}`;
   }
 }
-initializeApp();
+// Die App-Initialisierung wird als Promise bereitgestellt. Die Drive-Synchronisierung
+// wartet darauf, damit IndexedDB garantiert geöffnet ist, bevor Transaktionen starten.
+const mySpotifyReady = initializeApp();
+window.MySpotifyMusic.ready = mySpotifyReady;
+
 window.addEventListener("beforeunload", () => objectUrls.forEach(url => URL.revokeObjectURL(url)));

@@ -93,6 +93,16 @@ async function deleteDriveFile(fileId) {
 
 async function synchronizeSongs() {
   if (!accessToken || syncInProgress) return;
+
+  // Erst warten, bis script.js die IndexedDB-Datenbank geöffnet hat.
+  // So kann kein Zugriff auf database.transaction() vor der Initialisierung erfolgen.
+  if (window.MySpotifyMusic && window.MySpotifyMusic.ready) {
+    await window.MySpotifyMusic.ready;
+  }
+  if (!window.MySpotifyMusic || typeof window.MySpotifyMusic.getStoredSongs !== "function") {
+    throw new Error("MySpotify wurde noch nicht vollständig geladen. Bitte Seite neu laden.");
+  }
+
   syncInProgress = true;
   try {
     driveFolderId = driveFolderId || await ensureDriveFolder();
