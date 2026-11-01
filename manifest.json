@@ -1,0 +1,12 @@
+{
+    "id": "./",
+    "name": "MySpotify",
+    "short_name": "MySpotify",
+    "description": "Dein persönlicher Musikplayer",
+    "start_url": "./",
+    "scope": "./",
+    "display": "standalone",
+    "orientation": "any",
+    "background_color": "#121212",
+    "theme_color": "#121212"
+}

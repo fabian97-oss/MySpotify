@@ -1,14 +1,20 @@
-
 <!DOCTYPE html>
 <html lang="de">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <meta name="theme-color" content="#121212">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-title" content="MySpotify">
+
     <title>MySpotify</title>
 
     <link rel="stylesheet" href="style.css">
     <link rel="manifest" href="manifest.json">
+
+    <link rel="apple-touch-icon" href="assets/images/icon.png">
 </head>
 
 <body>
@@ -124,6 +130,21 @@
     </footer>
 
     <script src="script.js"></script>
+
+    <script>
+        // Service Worker für die installierbare App aktivieren
+        if ("serviceWorker" in navigator) {
+            window.addEventListener("load", () => {
+                navigator.serviceWorker.register("./sw.js")
+                    .then(() => {
+                        console.log("MySpotify ist als PWA bereit.");
+                    })
+                    .catch((error) => {
+                        console.error("Service Worker Fehler:", error);
+                    });
+            });
+        }
+    </script>
 
 </body>
 </html>
