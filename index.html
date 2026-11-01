@@ -9,10 +9,10 @@
   <meta name="apple-mobile-web-app-title" content="MySpotify">
   <meta name="description" content="Deine persönliche Musikbibliothek – lokal und optional mit Google Drive synchronisiert.">
   <title>MySpotify – Deine Musik</title>
-  <link rel="icon" type="image/png" href="assets/images/icon.png">
-  <link rel="apple-touch-icon" href="assets/images/icon.png">
-  <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="style.css">
+  <link rel="icon" type="image/png" href="./assets/images/icon.png">
+  <link rel="apple-touch-icon" href="./assets/images/icon.png">
+  <link rel="manifest" href="./manifest.json">
+  <link rel="stylesheet" href="./style.css">
 </head>
 <body>
   <header class="header">
@@ -139,14 +139,44 @@
     <button id="nav-library" type="button"><span aria-hidden="true">♫</span><span>Mediathek</span></button>
   </nav>
 
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
-  <script type="module" src="js/app.js"></script>
+  <script
+    src="https://accounts.google.com/gsi/client"
+    async
+    defer
+    onerror="document.getElementById('upload-status').textContent = 'Google-Anmeldung konnte nicht geladen werden. Prüfe deine Internetverbindung oder ob ein Script-Blocker Google blockiert.';"
+  ></script>
+  <script type="module" src="./js/app.js"></script>
   <script>
     if ("serviceWorker" in navigator && location.protocol !== "file:") {
-      window.addEventListener("load", () => {
-        navigator.serviceWorker.register("./sw.js")
-          .then(registration => registration.update().catch(() => {}))
-          .catch(error => console.error("Service Worker Fehler:", error));
+      window.addEventListener("load", async () => {
+        // Relativer Pfad funktioniert auch bei GitHub-Pages-Projektseiten
+        // (z. B. https://name.github.io/repository/).
+        const appDirectory = new URL("./", window.location.href);
+        const serviceWorkerUrl = new URL("sw.js", appDirectory);
+        try {
+          // Erst prüfen, ob GitHub Pages wirklich JavaScript liefert.
+          // Eine nicht gefundene Datei wird sonst oft als 404-Text/JSON geladen
+          // und erscheint in der Konsole als "Unexpected token ':'".
+          const check = await fetch(serviceWorkerUrl.href, { cache: "no-store" });
+          if (!check.ok) {
+            throw new Error(`sw.js wurde unter ${serviceWorkerUrl.pathname} nicht gefunden (HTTP ${check.status}).`);
+          }
+          const source = await check.text();
+          if (!source.includes("self.addEventListener") || source.trimStart().startsWith("{")) {
+            throw new Error(`Unter ${serviceWorkerUrl.pathname} liegt keine gültige Service-Worker-JavaScript-Datei. Lege sw.js direkt neben index.html im veröffentlichten GitHub-Pages-Ordner ab.`);
+          }
+          const registration = await navigator.serviceWorker.register(serviceWorkerUrl.href, {
+            scope: appDirectory.pathname,
+            updateViaCache: "none"
+          });
+          await registration.update().catch(() => {});
+        } catch (error) {
+          console.error("Service Worker konnte nicht registriert werden:", error);
+          const status = document.getElementById("upload-status");
+          if (status) {
+            status.textContent = `${status.textContent} Offline-Modus nicht aktiv: ${error.message}`;
+          }
+        }
       });
     }
   </script>

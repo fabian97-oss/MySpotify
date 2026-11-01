@@ -1,13 +1,4 @@
-
-# Eigene Musik niemals auf GitHub hochladen
-assets/music/
-*.mp3
-*.wav
-*.m4a
-*.ogg
-*.aac
-*.flac
-
-# Betriebssystem-Dateien
 .DS_Store
 Thumbs.db
+*.log
+.env
