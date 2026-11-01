@@ -70,6 +70,7 @@
         <button type="button" id="google-connect-button" class="drive-button">☁ Mit Google Drive verbinden</button>
       </div>
       <p id="upload-status" class="status" role="status" aria-live="polite">Deine Musik wird lokal gespeichert. Google Drive ist optional.</p>
+      <p id="drive-status" class="drive-status" role="status" aria-live="polite">Google-Anmeldung wird vorbereitet …</p>
 
       <section class="playlist-section" aria-labelledby="playlist-heading">
         <div class="subsection-heading">
@@ -139,13 +140,41 @@
     <button id="nav-library" type="button"><span aria-hidden="true">♫</span><span>Mediathek</span></button>
   </nav>
 
-  <script
-    src="https://accounts.google.com/gsi/client"
-    async
-    defer
-    onerror="document.getElementById('upload-status').textContent = 'Google-Anmeldung konnte nicht geladen werden. Prüfe deine Internetverbindung oder ob ein Script-Blocker Google blockiert.';"
-  ></script>
-  <script type="module" src="./js/app.js"></script>
+  <!-- Google Identity Services wird kontrolliert aus js/google-drive.js geladen.
+       Dadurch kann die App den Ladezustand prüfen, bevor ein OAuth-Popup angefordert wird. -->
+  <script type="module" src="./js/app.js?v=2.2.0"></script>
+  <script>
+    // Fallback-Diagnose: Selbst wenn ein ES-Modul wegen eines Import-/MIME-/404-Fehlers
+    // nicht startet, bleibt der Drive-Button nicht kommentarlos ohne Funktion.
+    (() => {
+      const button = document.getElementById("google-connect-button");
+      const status = document.getElementById("upload-status");
+      const writeStatus = message => {
+        if (status) status.textContent = message;
+      };
+
+      window.addEventListener("error", event => {
+        const file = String(event.filename || "");
+        if (file.includes("/js/") || /module script|failed to load/i.test(String(event.message || ""))) {
+          writeStatus(`MySpotify-JavaScriptfehler: ${event.message || "Ein App-Modul konnte nicht geladen werden."} (${file || "unbekannte Datei"})`);
+        }
+      });
+
+      window.addEventListener("unhandledrejection", event => {
+        const reason = event.reason;
+        const message = reason?.message || String(reason || "Unbekannter Fehler");
+        writeStatus(`MySpotify-Fehler: ${message}`);
+      });
+
+      button?.addEventListener("click", () => {
+        window.setTimeout(() => {
+          if (typeof window.MySpotifyDrive?.connect !== "function") {
+            writeStatus("Google Drive wurde nicht initialisiert. Das App-Modul ./js/app.js oder sein Import ./js/google-drive.js wurde nicht geladen. Bitte F12 → Netzwerk öffnen und nach roten JS-Dateien suchen.");
+          }
+        }, 0);
+      }, {capture: true});
+    })();
+  </script>
   <script>
     if ("serviceWorker" in navigator && location.protocol !== "file:") {
       window.addEventListener("load", async () => {

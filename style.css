@@ -193,3 +193,18 @@ input[type="range"] { accent-color: var(--green); cursor: pointer; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
 }
+
+
+/* Google-Drive-Verbindungsstatus */
+.drive-status {
+  min-height: 16px;
+  margin: -20px 0 22px;
+  color: #9fbea9;
+  font-size: 11px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.drive-status[data-state="error"] { color: #ff9aa9; }
+.drive-status[data-state="ready"] { color: #9ee9b6; }
+.drive-button:disabled { opacity: .65; cursor: wait; transform: none; }
+.drive-button[aria-busy="true"] { opacity: .75; cursor: progress; }

@@ -105,3 +105,18 @@ Bis dahin sollte jeder Nutzer seine eigene MySpotify-Instanz bzw. sein eigenes G
 Dieses ZIP ist absichtlich **ohne zusätzlichen Projekt-Unterordner** gepackt. Entpacke den ZIP-Inhalt direkt in den Repository-Hauptordner `fabian97-oss/MySpotify` und überschreibe die vorhandenen Dateien. Danach müssen `index.html`, `manifest.json`, `sw.js`, `style.css` und die Ordner `js/` sowie `assets/` direkt im Repository-Hauptordner liegen. Insbesondere den gesamten Ordner `js/` ersetzen: `js/app.js` ist der App-Einstiegspunkt und importiert `js/google-drive.js`; `js/metadata.js` enthält nur Metadaten-Hilfsfunktionen und darf nicht als `app.js` gespeichert werden.
 
 Für GitHub Pages mit der Adresse `https://fabian97-oss.github.io/MySpotify/` muss als autorisierter JavaScript-Ursprung in Google Cloud exakt `https://fabian97-oss.github.io` eingetragen sein (ohne `/MySpotify/`). Außerdem muss die Google Drive API aktiviert sein. Falls der OAuth-Zustimmungsbildschirm den Veröffentlichungsstatus „Test“ hat, muss das verwendete Google-Konto bei den Testnutzern stehen.
+
+
+## Google Drive auf GitHub Pages zuverlässig aktivieren
+
+1. In Google Cloud ein OAuth-Client vom Typ **Webanwendung** verwenden. Die Client-ID steht in `js/google-drive.js`; ein Client Secret wird im Browser **nicht** benötigt und darf dort nicht eingetragen werden.
+2. Die Google Drive API im selben Google-Cloud-Projekt aktivieren.
+3. Unter Google Auth Platform → Clients → OAuth-Webclient bei **Autorisierte JavaScript-Ursprünge** exakt `https://fabian97-oss.github.io` eintragen. Nicht `https://fabian97-oss.github.io/MySpotify/` (Pfad/Slash weglassen). Für lokalen Test zusätzlich `http://localhost:8000` eintragen.
+4. Falls der OAuth-Zustimmungsbildschirm im Testmodus ist, das Google-Konto als Testnutzer hinzufügen.
+5. Die Website unter `https://fabian97-oss.github.io/MySpotify/` öffnen. Unter dem Drive-Button muss zuerst „Google-Anmeldung bereit“ erscheinen. Erst dann verbinden.
+
+### Fehlerdiagnose
+
+Unter dem Drive-Button wird der Ladezustand des Google-Anmeldescripts angezeigt. Wenn das App-Modul nicht lädt, meldet ein Fallback dies beim Klick ausdrücklich. In der Browserkonsole liefert `MySpotifyDrive.getDiagnostics()` den Zustand von Button-Handler, Google-Script, OAuth-Client und aktuellem Ursprung.
+
+Google Identity Services wird beim App-Start geladen und nicht erst nach dem Klick. Der eigentliche `requestAccessToken()`-Aufruf erfolgt synchron im Klick-Handler, damit der Browser das Anmelde-Popup als direkte Nutzeraktion behandelt.

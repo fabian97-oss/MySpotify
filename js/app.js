@@ -1,13 +1,13 @@
 import {
   openDatabase, dbRequest, getSongs, addSong, putSong, removeSong,
   getOrCreateDeviceId
-} from "./database.js";
+} from "./database.js?v=2.2.0";
 import {
   normalizeMetadata, mergeMetadata, migrateSongMetadata,
   setFavoriteState, setCoverState
-} from "./metadata.js";
-import {MusicPlayer} from "./player.js";
-import {createGoogleDrive} from "./google-drive.js";
+} from "./metadata.js?v=2.2.0";
+import {MusicPlayer} from "./player.js?v=2.2.0";
+import {createGoogleDrive} from "./google-drive.js?v=2.2.0";
 
 const audio = document.getElementById("audio-player");
 const uploadInput = document.getElementById("music-upload");
@@ -30,7 +30,7 @@ let appReady;
 const objectUrls = new Map();
 
 function setStatus(message) {
-  statusText.textContent = message;
+  if (statusText) statusText.textContent = message;
 }
 
 function songKey(song) {
@@ -684,6 +684,7 @@ window.addEventListener("beforeunload", () => {
 
 // Kleine, bewusst lesbare Debug-Schnittstelle für lokale Fehlersuche.
 window.MySpotify = {
-  getState: () => ({songCount: songs.length, currentSongId: player?.currentSongId ?? null, playlistCount: metadata.playlists.length}),
-  sync: () => drive.synchronizeSongs()
+  getState: () => ({songCount: songs.length, currentSongId: player?.currentSongId ?? null, playlistCount: metadata.playlists.length, initialized: Boolean(player)}),
+  sync: () => drive.synchronizeSongs(),
+  connectGoogleDrive: () => drive.connect()
 };

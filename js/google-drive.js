@@ -1,10 +1,59 @@
-import {mergeMetadata} from "./metadata.js";
+import {mergeMetadata} from "./metadata.js?v=2.2.0";
 
 const GOOGLE_CLIENT_ID = "549476284025-chhtts628n343481h3ipoomikrkmem2q.apps.googleusercontent.com";
 const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";
 const DRIVE_FOLDER_NAME = "MySpotify Music";
 const METADATA_FILE_NAME = "myspotify-library.json";
 const UPLOAD_CHUNK_SIZE = 8 * 1024 * 1024; // Vielfaches von 256 KiB
+const GOOGLE_IDENTITY_URL = "https://accounts.google.com/gsi/client";
+
+let googleIdentityPromise = null;
+
+function hasGoogleIdentityServices() {
+  return Boolean(window.google?.accounts?.oauth2?.initTokenClient);
+}
+
+function loadGoogleIdentityServices(forceRetry = false) {
+  if (hasGoogleIdentityServices()) return Promise.resolve();
+  if (googleIdentityPromise && !forceRetry) return googleIdentityPromise;
+
+  // Einen eventuell fehlgeschlagenen alten Script-Tag entfernen, damit ein erneuter
+  // Klick einen echten zweiten Ladeversuch auslösen kann.
+  document.querySelectorAll('script[data-myspotify-google-identity="true"]').forEach(script => script.remove());
+
+  googleIdentityPromise = new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    let settled = false;
+    const finish = (error = null) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      if (error) {
+        googleIdentityPromise = null;
+        reject(error);
+      } else {
+        resolve();
+      }
+    };
+
+    const timer = setTimeout(() => {
+      script.remove();
+      finish(new Error("Zeitüberschreitung beim Laden von Google Identity Services. Prüfe Internetverbindung, Werbe-/Scriptblocker oder DNS-Filter."));
+    }, 15000);
+
+    script.src = GOOGLE_IDENTITY_URL;
+    script.async = true;
+    script.dataset.myspotifyGoogleIdentity = "true";
+    script.onload = () => {
+      if (hasGoogleIdentityServices()) finish();
+      else finish(new Error("Google hat das Anmeldescript geladen, aber google.accounts.oauth2 ist nicht verfügbar."));
+    };
+    script.onerror = () => finish(new Error("Google Identity Services wurde blockiert oder konnte nicht geladen werden. Erlaube https://accounts.google.com in deinem Browser/Scriptblocker."));
+    document.head.appendChild(script);
+  });
+
+  return googleIdentityPromise;
+}
 
 const wait = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds));
 const audioExtensions = /\.(mp3|wav|ogg|m4a|aac|flac|opus|aiff|wma)$/i;
@@ -41,6 +90,15 @@ export function createGoogleDrive({
   let metadataWriteQueue = Promise.resolve();
 
   const connectButton = document.getElementById("google-connect-button");
+  const driveStatus = document.getElementById("drive-status");
+  let googleSdkState = "loading";
+  let googleSdkError = null;
+
+  function setDriveStatus(message, state = "info") {
+    if (!driveStatus) return;
+    driveStatus.textContent = message;
+    driveStatus.dataset.state = state;
+  }
 
   function setButtonConnected(connected) {
     if (!connectButton) return;
@@ -50,8 +108,8 @@ export function createGoogleDrive({
 
   function initTokenClient() {
     if (tokenClient) return;
-    if (!window.google?.accounts?.oauth2) {
-      throw new Error("Die Google-Anmeldung wurde nicht geladen. Bitte prüfe deine Internetverbindung und lade die Seite neu.");
+    if (!hasGoogleIdentityServices()) {
+      throw new Error("Google Identity Services ist noch nicht verfügbar. Siehe den Google-Drive-Status unter dem Button.");
     }
     if (!GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID.includes("HIER_DEINE")) {
       throw new Error("Bitte trage eine gültige Google-Client-ID in js/google-drive.js ein.");
@@ -435,6 +493,36 @@ export function createGoogleDrive({
 
   async function connect() {
     if (connectButton?.dataset.busy === "true") return;
+
+    // Wenn der Google-Client beim Seitenstart blockiert war, wird er auf expliziten
+    // Nutzerklick erneut geladen. OAuth selbst startet erst beim nächsten Klick,
+    // damit der Browser die Popup-Anfrage sicher als Nutzeraktion erkennt.
+    if (!hasGoogleIdentityServices()) {
+      setStatus("Google-Anmeldung ist noch nicht bereit. Das Anmeldescript wird erneut geladen …");
+      if (connectButton) {
+        connectButton.disabled = true;
+        connectButton.textContent = "Google-Anmeldung lädt …";
+      }
+      try {
+        googleSdkState = "loading";
+        await loadGoogleIdentityServices(true);
+        googleSdkState = "ready";
+        googleSdkError = null;
+        setButtonConnected(false);
+        setDriveStatus("Google-Anmeldung ist geladen. Klicke erneut auf „Mit Google Drive verbinden“.", "ready");
+        setStatus("Google-Anmeldung erfolgreich geladen. Bitte klicke noch einmal auf „Mit Google Drive verbinden“.");
+      } catch (error) {
+        googleSdkState = "error";
+        googleSdkError = error;
+        setDriveStatus(error.message, "error");
+        setStatus(`Google Drive kann nicht starten: ${error.message}`);
+        if (connectButton) connectButton.textContent = "Google-Anmeldung erneut laden";
+      } finally {
+        if (connectButton) connectButton.disabled = false;
+      }
+      return;
+    }
+
     if (connectButton) {
       connectButton.dataset.busy = "true";
       connectButton.disabled = true;
@@ -442,21 +530,29 @@ export function createGoogleDrive({
     }
     try {
       if (accessToken) {
+        setStatus("Google Drive ist verbunden. Synchronisierung wird gestartet …");
         await synchronizeSongs();
         return;
       }
+      if (location.protocol !== "https:" && location.hostname !== "localhost" && location.hostname !== "127.0.0.1") {
+        throw new Error("Google OAuth benötigt HTTPS. Öffne MySpotify über deine GitHub-Pages-Adresse.");
+      }
       setStatus("Google-Anmeldung wird geöffnet … Falls kein Fenster erscheint, erlaube Pop-ups für diese Website.");
+      setDriveStatus("Google-Anmeldefenster wird geöffnet …", "info");
+      // requestAccessToken wird synchron innerhalb des Button-Klicks aufgerufen.
       await requestAccessToken("");
       setButtonConnected(true);
+      setDriveStatus("Google-Konto erfolgreich verbunden.", "ready");
       setStatus("Google Drive verbunden. Synchronisierung startet …");
       await synchronizeSongs();
     } catch (error) {
       console.error("Google-Drive-Verbindung fehlgeschlagen:", error);
       const message = error?.message || String(error);
-      const originHint = /origin_mismatch|unauthorized origin|origin.*not authorized/i.test(message)
-        ? " Trage in Google Cloud unter „Autorisierte JavaScript-Ursprünge“ deine GitHub-Pages-Domain ein (nur https://name.github.io, ohne Repository-Pfad)."
-        : " Prüfe auch, ob die Google Drive API aktiviert ist und dein Google-Konto im OAuth-Zustimmungsbildschirm als Testnutzer eingetragen ist.";
+      const originHint = /origin_mismatch|unauthorized origin|origin.*not authorized|origin is not allowed/i.test(message)
+        ? ` Google Cloud → OAuth-Webclient → Autorisierte JavaScript-Ursprünge muss exakt https://fabian97-oss.github.io enthalten (ohne /MySpotify/). Aktueller Ursprung: ${location.origin}.`
+        : " Prüfe zusätzlich, ob die Drive API aktiviert ist, der OAuth-Client vom Typ Webanwendung ist und dein Konto bei einem Testprojekt als Testnutzer eingetragen ist.";
       setStatus(`Google Drive: ${message}${originHint}`);
+      setDriveStatus(message, "error");
       if (!accessToken) setButtonConnected(false);
     } finally {
       if (connectButton) {
@@ -467,13 +563,53 @@ export function createGoogleDrive({
     }
   }
 
+  // GIS vor dem ersten Nutzerklick laden; der Button ist währenddessen sichtbar gesperrt.
+  if (connectButton) {
+    connectButton.disabled = true;
+    connectButton.textContent = "Google-Anmeldung lädt …";
+  }
+  setDriveStatus("Google-Anmeldedienst wird geladen …");
+  loadGoogleIdentityServices().then(() => {
+    googleSdkState = "ready";
+    googleSdkError = null;
+    if (connectButton) {
+      connectButton.disabled = false;
+      setButtonConnected(false);
+    }
+    setDriveStatus(`Google-Anmeldung bereit · Website: ${location.origin}`, "ready");
+  }).catch(error => {
+    googleSdkState = "error";
+    googleSdkError = error;
+    if (connectButton) {
+      connectButton.disabled = false;
+      connectButton.textContent = "Google-Anmeldung erneut laden";
+    }
+    setDriveStatus(error.message, "error");
+  });
+
   connectButton?.addEventListener("click", connect);
 
-  return {
+  const publicApi = {
+    connect,
     isConnected: () => Boolean(accessToken),
     synchronizeSongs,
     saveMetadata: saveMetadataToDrive,
     deleteDriveFile,
+    getDiagnostics: () => ({
+      handlerBound: Boolean(connectButton),
+      buttonFound: Boolean(connectButton),
+      googleSdkLoaded: hasGoogleIdentityServices(),
+      googleSdkState,
+      googleSdkError: googleSdkError?.message || null,
+      clientIdConfigured: Boolean(GOOGLE_CLIENT_ID && GOOGLE_CLIENT_ID.endsWith(".apps.googleusercontent.com")),
+      origin: location.origin,
+      protocol: location.protocol,
+      tokenClientInitialized: Boolean(tokenClient),
+      connected: Boolean(accessToken)
+    }),
     disconnect: () => { accessToken = null; setButtonConnected(false); }
   };
+  window.MySpotifyDrive = publicApi;
+  window.dispatchEvent(new CustomEvent("myspotify-drive-ready"));
+  return publicApi;
 }
