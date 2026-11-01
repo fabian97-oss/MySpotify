@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="de">
 <head>
@@ -13,7 +14,6 @@
 
     <link rel="stylesheet" href="style.css">
     <link rel="manifest" href="manifest.json">
-
     <link rel="apple-touch-icon" href="assets/images/icon.png">
 </head>
 
@@ -71,7 +71,14 @@
                 >
             </div>
 
-            <p id="upload-status" style="color:#b3b3b3; font-size:13px; margin-bottom:12px;">
+            <button
+                type="button"
+                id="google-connect-button"
+                class="upload-button">
+                ☁️ Mit Google Drive verbinden
+            </button>
+
+            <p id="upload-status" style="color:#b3b3b3; font-size:13px; margin:12px 0;">
                 Deine Musik wird automatisch gespeichert.
             </p>
 
@@ -129,17 +136,15 @@
         <button>♫<span>Mediathek</span></button>
     </footer>
 
+    <script src="https://accounts.google.com/gsi/client"></script>
+    <script src="google-drive.js"></script>
     <script src="script.js"></script>
 
     <script>
-        // Service Worker für die installierbare App aktivieren
         if ("serviceWorker" in navigator) {
             window.addEventListener("load", () => {
                 navigator.serviceWorker.register("./sw.js")
-                    .then(() => {
-                        console.log("MySpotify ist als PWA bereit.");
-                    })
-                    .catch((error) => {
+                    .catch(error => {
                         console.error("Service Worker Fehler:", error);
                     });
             });
