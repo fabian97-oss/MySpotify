@@ -1,0 +1,129 @@
+
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#121212">
+    <title>MySpotify</title>
+
+    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+</head>
+
+<body>
+
+    <header class="header">
+        <h1>♫ MySpotify</h1>
+        <button class="profile-button">M</button>
+    </header>
+
+    <main class="main-content">
+
+        <h2>Guten Abend 👋</h2>
+
+        <section class="quick-access">
+            <div class="playlist">
+                <div class="playlist-cover">🎧</div>
+                <span>Meine Favoriten</span>
+            </div>
+
+            <div class="playlist">
+                <div class="playlist-cover">🎵</div>
+                <span>Meine Musik</span>
+            </div>
+
+            <div class="playlist">
+                <div class="playlist-cover">❤️</div>
+                <span>Lieblingssongs</span>
+            </div>
+
+            <div class="playlist">
+                <div class="playlist-cover">🔥</div>
+                <span>Meine Playlist</span>
+            </div>
+        </section>
+
+        <section class="music-section">
+
+            <div class="music-heading">
+                <h2>Deine Musik</h2>
+
+                <button
+                    type="button"
+                    id="upload-button"
+                    class="upload-button">
+                    + Songs hinzufügen
+                </button>
+
+                <input
+                    type="file"
+                    id="music-upload"
+                    accept="audio/*,.mp3,.wav,.ogg,.m4a,.aac"
+                    multiple
+                    hidden
+                >
+            </div>
+
+            <p id="upload-status" style="color:#b3b3b3; font-size:13px; margin-bottom:12px;">
+                Deine Musik wird automatisch gespeichert.
+            </p>
+
+            <div id="song-list" class="song-list">
+                <div class="empty-music">
+                    <span>🎶</span>
+                    <h3>Noch keine Musik vorhanden</h3>
+                    <p>Füge deine eigenen Songs hinzu.</p>
+                </div>
+            </div>
+
+        </section>
+
+    </main>
+
+    <div class="music-player">
+
+        <div class="current-song">
+            <div class="player-cover">🎵</div>
+
+            <div class="song-info">
+                <strong id="current-title">Kein Song ausgewählt</strong>
+                <span id="current-artist">MySpotify</span>
+            </div>
+        </div>
+
+        <div class="player-controls">
+
+            <div class="control-buttons">
+                <button id="previous-btn" aria-label="Vorheriger Song">⏮</button>
+                <button id="play-btn" class="play-button" aria-label="Abspielen">▶</button>
+                <button id="next-btn" aria-label="Nächster Song">⏭</button>
+            </div>
+
+            <div class="progress-container">
+                <span id="current-time">0:00</span>
+                <input type="range" id="progress" min="0" max="100" value="0">
+                <span id="duration">0:00</span>
+            </div>
+
+        </div>
+
+        <div class="volume-control">
+            <span>🔊</span>
+            <input type="range" id="volume" min="0" max="1" step="0.01" value="0.7">
+        </div>
+
+    </div>
+
+    <audio id="audio-player"></audio>
+
+    <footer class="bottom-navigation">
+        <button>⌂<span>Start</span></button>
+        <button>⌕<span>Suche</span></button>
+        <button>♫<span>Mediathek</span></button>
+    </footer>
+
+    <script src="script.js"></script>
+
+</body>
+</html>
