@@ -1,0 +1,26 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>OAuth button smoke test</title></head><body>
+<button id="google-connect-button">Connect</button>
+<p id="upload-status"></p><p id="drive-status"></p>
+<script>
+window.__tokenRequested = false;
+window.google = {accounts:{oauth2:{initTokenClient(config){return {requestAccessToken(){window.__tokenRequested=true;config.callback({access_token:'test-access-token'});}};}}}};
+</script>
+<script type="module">
+import {createGoogleDrive} from './js/google-drive.js';
+const drive = createGoogleDrive({
+  getMetadata: async () => ({}), setMetadata: async value => value,
+  getStoredSongs: async () => [], saveDownloadedSong: async () => {},
+  setDriveFileId: async () => {}, deleteLocalSong: async () => {}, refreshLibrary: async () => {},
+  waitUntilReady: async () => { throw new Error('SMOKE_TEST_SYNC_STOP'); },
+  setStatus: message => { document.getElementById('upload-status').textContent = message; }
+});
+window.__driveApi = drive;
+await new Promise(resolve => setTimeout(resolve, 50));
+document.getElementById('google-connect-button').click();
+setTimeout(() => {
+  document.body.dataset.tokenRequested = String(window.__tokenRequested);
+  document.body.dataset.handlerBound = String(window.__driveApi.getDiagnostics().handlerBound);
+  document.body.dataset.sdkReady = String(window.__driveApi.getDiagnostics().googleSdkLoaded);
+  document.body.dataset.status = document.getElementById('upload-status').textContent;
+}, 250);
+</script></body></html>

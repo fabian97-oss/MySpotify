@@ -1,13 +1,13 @@
 import {
   openDatabase, dbRequest, getSongs, addSong, putSong, removeSong,
   getOrCreateDeviceId
-} from "./database.js?v=2.2.0";
+} from "./database.js?v=2.2.1";
 import {
   normalizeMetadata, mergeMetadata, migrateSongMetadata,
   setFavoriteState, setCoverState
-} from "./metadata.js?v=2.2.0";
-import {MusicPlayer} from "./player.js?v=2.2.0";
-import {createGoogleDrive} from "./google-drive.js?v=2.2.0";
+} from "./metadata.js?v=2.2.1";
+import {MusicPlayer} from "./player.js?v=2.2.1";
+import {createGoogleDrive} from "./google-drive.js?v=2.2.1";
 
 const audio = document.getElementById("audio-player");
 const uploadInput = document.getElementById("music-upload");

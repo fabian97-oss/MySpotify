@@ -120,3 +120,11 @@ Für GitHub Pages mit der Adresse `https://fabian97-oss.github.io/MySpotify/` mu
 Unter dem Drive-Button wird der Ladezustand des Google-Anmeldescripts angezeigt. Wenn das App-Modul nicht lädt, meldet ein Fallback dies beim Klick ausdrücklich. In der Browserkonsole liefert `MySpotifyDrive.getDiagnostics()` den Zustand von Button-Handler, Google-Script, OAuth-Client und aktuellem Ursprung.
 
 Google Identity Services wird beim App-Start geladen und nicht erst nach dem Klick. Der eigentliche `requestAccessToken()`-Aufruf erfolgt synchron im Klick-Handler, damit der Browser das Anmelde-Popup als direkte Nutzeraktion behandelt.
+
+
+## GitHub-Pages-Diagnose (Version 2.2.1)
+
+Nach dem Push zuerst `https://fabian97-oss.github.io/MySpotify/diagnose.html` öffnen.
+Die Seite prüft HTTP-Status, MIME-Typ und Dateiinhalte für Index, Manifest, Service Worker und alle JavaScript-Module.
+Der App-Start verwendet einen abgefangenen dynamischen Import und zeigt Modul-/MIME-/404-Fehler direkt unter dem Drive-Button.
+In der Konsole sind zusätzlich `window.MySpotifyBoot` und nach erfolgreichem Start `MySpotifyDrive.getDiagnostics()` verfügbar.

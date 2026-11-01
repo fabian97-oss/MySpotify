@@ -140,40 +140,55 @@
     <button id="nav-library" type="button"><span aria-hidden="true">♫</span><span>Mediathek</span></button>
   </nav>
 
-  <!-- Google Identity Services wird kontrolliert aus js/google-drive.js geladen.
-       Dadurch kann die App den Ladezustand prüfen, bevor ein OAuth-Popup angefordert wird. -->
-  <script type="module" src="./js/app.js?v=2.2.0"></script>
-  <script>
-    // Fallback-Diagnose: Selbst wenn ein ES-Modul wegen eines Import-/MIME-/404-Fehlers
-    // nicht startet, bleibt der Drive-Button nicht kommentarlos ohne Funktion.
-    (() => {
-      const button = document.getElementById("google-connect-button");
-      const status = document.getElementById("upload-status");
-      const writeStatus = message => {
-        if (status) status.textContent = message;
-      };
+  <!-- App-Start mit expliziter Fehlerdiagnose für dynamische ES-Modul-Imports. -->
+  <script type="module">
+    const appVersion = "2.2.1";
+    const appStatus = document.getElementById("upload-status");
+    const driveStatus = document.getElementById("drive-status");
+    const driveButton = document.getElementById("google-connect-button");
+    const showBootError = (heading, error) => {
+      const name = error?.name || "Fehler";
+      const message = error?.message || String(error || "Unbekannter Fehler");
+      const detail = `${name}: ${message}`;
+      window.MySpotifyBoot = {state: "error", version: appVersion, error: detail, stack: error?.stack || null};
+      console.error("MySpotify App-Start fehlgeschlagen:", error);
+      if (appStatus) appStatus.textContent = `${heading}: ${detail}`;
+      if (driveStatus) {
+        driveStatus.textContent = `Google Drive nicht verfügbar, weil die App nicht vollständig gestartet ist. ${detail}`;
+        driveStatus.dataset.state = "error";
+      }
+      if (driveButton) {
+        driveButton.disabled = true;
+        driveButton.textContent = "App-Start fehlgeschlagen";
+        driveButton.title = detail;
+      }
+    };
 
-      window.addEventListener("error", event => {
-        const file = String(event.filename || "");
-        if (file.includes("/js/") || /module script|failed to load/i.test(String(event.message || ""))) {
-          writeStatus(`MySpotify-JavaScriptfehler: ${event.message || "Ein App-Modul konnte nicht geladen werden."} (${file || "unbekannte Datei"})`);
-        }
-      });
+    window.MySpotifyBoot = {state: "loading", version: appVersion, error: null};
+    if (driveButton) {
+      driveButton.disabled = true;
+      driveButton.textContent = "MySpotify wird geladen …";
+    }
+    if (appStatus) appStatus.textContent = "MySpotify wird initialisiert …";
 
-      window.addEventListener("unhandledrejection", event => {
-        const reason = event.reason;
-        const message = reason?.message || String(reason || "Unbekannter Fehler");
-        writeStatus(`MySpotify-Fehler: ${message}`);
-      });
+    try {
+      // Dynamischer Import macht den konkreten Netzwerk-, MIME- oder Syntaxfehler
+      // als Promise-Rejection sichtbar, statt nur einen generischen Button-Fehler zu zeigen.
+      await import(`./js/app.js?v=${appVersion}`);
+      if (typeof window.MySpotifyDrive?.connect !== "function") {
+        throw new Error("js/app.js wurde ausgeführt, aber js/google-drive.js hat keine Drive-API registriert. Prüfe den Import und createGoogleDrive().");
+      }
+      window.MySpotifyBoot = {state: "ready", version: appVersion, error: null};
+      console.info(`MySpotify ${appVersion}: App- und Drive-Module wurden geladen.`);
+    } catch (error) {
+      showBootError("App-Modul konnte nicht geladen werden", error);
+    }
 
-      button?.addEventListener("click", () => {
-        window.setTimeout(() => {
-          if (typeof window.MySpotifyDrive?.connect !== "function") {
-            writeStatus("Google Drive wurde nicht initialisiert. Das App-Modul ./js/app.js oder sein Import ./js/google-drive.js wurde nicht geladen. Bitte F12 → Netzwerk öffnen und nach roten JS-Dateien suchen.");
-          }
-        }, 0);
-      }, {capture: true});
-    })();
+    window.addEventListener("unhandledrejection", event => {
+      const error = event.reason instanceof Error ? event.reason : new Error(String(event.reason || "Unbekannter Fehler"));
+      console.error("MySpotify unbehandelte Promise-Ablehnung:", error);
+      if (appStatus) appStatus.textContent = `MySpotify-Laufzeitfehler: ${error.name}: ${error.message}`;
+    });
   </script>
   <script>
     if ("serviceWorker" in navigator && location.protocol !== "file:") {

@@ -1,4 +1,4 @@
-import {mergeMetadata} from "./metadata.js?v=2.2.0";
+import {mergeMetadata} from "./metadata.js?v=2.2.1";
 
 const GOOGLE_CLIENT_ID = "549476284025-chhtts628n343481h3ipoomikrkmem2q.apps.googleusercontent.com";
 const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";
@@ -563,7 +563,34 @@ export function createGoogleDrive({
     }
   }
 
-  // GIS vor dem ersten Nutzerklick laden; der Button ist währenddessen sichtbar gesperrt.
+  const publicApi = {
+    connect,
+    isConnected: () => Boolean(accessToken),
+    synchronizeSongs,
+    saveMetadata: saveMetadataToDrive,
+    deleteDriveFile,
+    getDiagnostics: () => ({
+      handlerBound: Boolean(connectButton),
+      buttonFound: Boolean(connectButton),
+      googleSdkLoaded: hasGoogleIdentityServices(),
+      googleSdkState,
+      googleSdkError: googleSdkError?.message || null,
+      clientIdConfigured: Boolean(GOOGLE_CLIENT_ID && GOOGLE_CLIENT_ID.endsWith(".apps.googleusercontent.com")),
+      origin: location.origin,
+      protocol: location.protocol,
+      tokenClientInitialized: Boolean(tokenClient),
+      connected: Boolean(accessToken)
+    }),
+    disconnect: () => { accessToken = null; setButtonConnected(false); }
+  };
+  // API sofort veröffentlichen, bevor externe Google-Skripte geladen werden.
+  // So ist die App-Diagnose unabhängig von Netzwerk-/Scriptblocker-Problemen.
+  window.MySpotifyDrive = publicApi;
+  window.dispatchEvent(new CustomEvent("myspotify-drive-ready"));
+  connectButton?.addEventListener("click", connect);
+
+  // Google Identity Services im Hintergrund laden. Der Button bleibt währenddessen
+  // deaktiviert und wird danach entweder freigegeben oder mit einem Fehlerhinweis versehen.
   if (connectButton) {
     connectButton.disabled = true;
     connectButton.textContent = "Google-Anmeldung lädt …";
@@ -587,29 +614,5 @@ export function createGoogleDrive({
     setDriveStatus(error.message, "error");
   });
 
-  connectButton?.addEventListener("click", connect);
-
-  const publicApi = {
-    connect,
-    isConnected: () => Boolean(accessToken),
-    synchronizeSongs,
-    saveMetadata: saveMetadataToDrive,
-    deleteDriveFile,
-    getDiagnostics: () => ({
-      handlerBound: Boolean(connectButton),
-      buttonFound: Boolean(connectButton),
-      googleSdkLoaded: hasGoogleIdentityServices(),
-      googleSdkState,
-      googleSdkError: googleSdkError?.message || null,
-      clientIdConfigured: Boolean(GOOGLE_CLIENT_ID && GOOGLE_CLIENT_ID.endsWith(".apps.googleusercontent.com")),
-      origin: location.origin,
-      protocol: location.protocol,
-      tokenClientInitialized: Boolean(tokenClient),
-      connected: Boolean(accessToken)
-    }),
-    disconnect: () => { accessToken = null; setButtonConnected(false); }
-  };
-  window.MySpotifyDrive = publicApi;
-  window.dispatchEvent(new CustomEvent("myspotify-drive-ready"));
   return publicApi;
 }

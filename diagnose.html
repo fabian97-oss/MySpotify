@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#101010"><title>MySpotify – Dateidiagnose</title>
+<style>
+:root{color-scheme:dark;font:15px system-ui,sans-serif;background:#101010;color:#f3f3f3}body{max-width:900px;margin:32px auto;padding:0 18px}h1{font-size:25px}p{color:#aaa;line-height:1.5}table{width:100%;border-collapse:collapse;margin-top:20px}td,th{text-align:left;padding:11px 9px;border-bottom:1px solid #333;vertical-align:top}th{color:#1ed760}code{overflow-wrap:anywhere}.ok{color:#1ed760}.bad{color:#ff788b}.warn{color:#ffd166}button{padding:10px 15px;border:0;border-radius:8px;background:#1ed760;font-weight:700;cursor:pointer;margin:12px 0}.small{font-size:12px;color:#999}#summary{padding:12px;border:1px solid #333;border-radius:9px}
+</style></head><body>
+<h1>MySpotify – GitHub-Dateidiagnose</h1>
+<p>Diese Seite prüft die veröffentlichten Dateien direkt. Sie startet den Player nicht und verändert keine lokale Musik oder IndexedDB.</p>
+<div id="summary">Prüfung läuft …</div><button id="run" type="button">Erneut prüfen</button>
+<table><thead><tr><th>Datei</th><th>HTTP</th><th>Content-Type</th><th>Ergebnis</th></tr></thead><tbody id="rows"></tbody></table>
+<p class="small">Versionskennung: 2.2.1 · Browser-Ursprung: <code id="origin"></code></p>
+<script>
+const files=[
+  {path:"./index.html",kind:"html",need:"google-connect-button"},
+  {path:"./manifest.json?v=2.2.1",kind:"json",need:"name"},
+  {path:"./sw.js",kind:"js",need:"self.addEventListener"},
+  {path:"./style.css?v=2.2.1",kind:"css",need:":root"},
+  {path:"./js/app.js?v=2.2.1",kind:"js",need:"createGoogleDrive"},
+  {path:"./js/google-drive.js?v=2.2.1",kind:"js",need:"export function createGoogleDrive"},
+  {path:"./js/database.js?v=2.2.1",kind:"js",need:"openDatabase"},
+  {path:"./js/metadata.js?v=2.2.1",kind:"js",need:"mergeMetadata"},
+  {path:"./js/player.js?v=2.2.1",kind:"js",need:"MusicPlayer"}
+];
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+async function run(){const rows=document.getElementById("rows");rows.replaceChildren();let bad=0;
+ for(const f of files){let status="–",type="–",result="",cls="bad";try{const r=await fetch(f.path,{cache:"no-store"});status=`${r.status} ${r.statusText}`;type=r.headers.get("content-type")||"(kein Content-Type)";const text=await r.text();const prefix=text.trimStart().slice(0,80);let valid=r.ok;
+  if(f.kind==="json"){try{JSON.parse(text)}catch{valid=false}}
+  if(f.kind==="js" && (/text\/html/i.test(type)||/^<!doctype html|^<html/i.test(prefix)))valid=false;
+  if(f.kind==="css" && (/text\/html/i.test(type)||/^<!doctype html|^<html/i.test(prefix)))valid=false;
+  if(f.kind==="js"||f.kind==="css"||f.kind==="html"){if(!text.includes(f.need))valid=false}
+  if(f.kind==="json"&&!text.includes(f.need))valid=false;
+  result=valid?"OK – erwarteter Dateiinhalt gefunden":`FEHLER – Antwort passt nicht. Anfang: ${prefix}`;cls=valid?"ok":"bad";if(!valid)bad++;
+ }catch(e){status="Netzwerkfehler";result=e.message;cls="bad";bad++}
+ const tr=document.createElement("tr");tr.innerHTML=`<td><code>${esc(f.path)}</code></td><td>${esc(status)}</td><td>${esc(type)}</td><td class="${cls}">${esc(result)}</td>`;rows.append(tr);
+ }
+ document.getElementById("summary").innerHTML=bad?`<span class="bad"><b>${bad} Problem(e)</b> gefunden.</span> Kopiere bitte die ganze Tabelle oder einen Screenshot.`:`<span class="ok"><b>Alle ${files.length} Dateien erreichbar und inhaltlich plausibel.</b></span> Falls die App trotzdem nicht startet, steht der konkrete Modulfehler in der Browserkonsole.`;
+}
+document.getElementById("origin").textContent=location.origin;document.getElementById("run").addEventListener("click",run);run();
+</script></body></html>
