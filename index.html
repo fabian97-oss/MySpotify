@@ -142,7 +142,7 @@
 
   <!-- App-Start mit expliziter Fehlerdiagnose für dynamische ES-Modul-Imports. -->
   <script type="module">
-    const appVersion = "2.2.1";
+    const appVersion = "2.2.2";
     const appStatus = document.getElementById("upload-status");
     const driveStatus = document.getElementById("drive-status");
     const driveButton = document.getElementById("google-connect-button");
@@ -178,6 +178,12 @@
       if (typeof window.MySpotifyDrive?.connect !== "function") {
         throw new Error("js/app.js wurde ausgeführt, aber js/google-drive.js hat keine Drive-API registriert. Prüfe den Import und createGoogleDrive().");
       }
+      if (!window.MySpotifyAppReady || typeof window.MySpotifyAppReady.then !== "function") {
+        throw new Error("Die App hat kein Initialisierungs-Promise bereitgestellt. Prüfe js/app.js.");
+      }
+      // Nicht nur den Modulimport, sondern auch IndexedDB, den ersten Render
+      // und das Binden der Schaltflächen abwarten, bevor die App als bereit gilt.
+      await window.MySpotifyAppReady;
       window.MySpotifyBoot = {state: "ready", version: appVersion, error: null};
       console.info(`MySpotify ${appVersion}: App- und Drive-Module wurden geladen.`);
     } catch (error) {

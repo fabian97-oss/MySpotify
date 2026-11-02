@@ -1,13 +1,13 @@
 import {
   openDatabase, dbRequest, getSongs, addSong, putSong, removeSong,
   getOrCreateDeviceId
-} from "./database.js?v=2.2.1";
+} from "./database.js?v=2.2.2";
 import {
   normalizeMetadata, mergeMetadata, migrateSongMetadata,
   setFavoriteState, setCoverState
-} from "./metadata.js?v=2.2.1";
-import {MusicPlayer} from "./player.js?v=2.2.1";
-import {createGoogleDrive} from "./google-drive.js?v=2.2.1";
+} from "./metadata.js?v=2.2.2";
+import {MusicPlayer} from "./player.js?v=2.2.2";
+import {createGoogleDrive} from "./google-drive.js?v=2.2.2";
 
 const audio = document.getElementById("audio-player");
 const uploadInput = document.getElementById("music-upload");
@@ -24,6 +24,9 @@ const isAudioFile = file => Boolean(file?.type?.startsWith("audio/") || /\.(mp3|
 let metadata = normalizeMetadata({});
 let songs = [];
 let deviceId = "";
+// UI-Zustand muss vor dem ersten renderAll() existieren (refreshSongs läuft beim Start).
+let currentView = "all";
+let activePlaylistId = null;
 let player;
 let drive;
 let appReady;
@@ -48,6 +51,13 @@ function getSongById(id) {
 async function loadMetadata() {
   const record = await dbRequest("settings", "readonly", store => store.get("library"));
   metadata = normalizeMetadata(record?.value || {});
+}
+
+// Wird von google-drive.js beim Sync benötigt. Die App-Initialisierung wird vor
+// einem Zugriff abgewartet, damit IndexedDB garantiert geöffnet ist.
+async function getStoredSongs() {
+  if (appReady) await appReady;
+  return getSongs();
 }
 
 async function persistMetadata(syncToCloud = true) {
@@ -648,7 +658,17 @@ async function initializeApp() {
   }
 }
 
-appReady = initializeApp();
+// Die Bereitschaft umfasst sowohl Datenbank-/Bibliotheksinitialisierung als auch
+// das Binden der UI-Events. Der HTML-Bootstrap wartet auf genau dieses Promise.
+appReady = initializeApp().then(() => {
+  bindEvents();
+  return true;
+});
+window.MySpotifyAppReady = appReady;
+appReady.catch(error => {
+  console.error("MySpotify Initialisierung fehlgeschlagen:", error);
+  setStatus(`MySpotify konnte nicht vollständig gestartet werden: ${error.message}`);
+});
 
 drive = createGoogleDrive({
   getMetadata: async () => { await appReady; return structuredClone(metadata); },
@@ -672,10 +692,6 @@ drive = createGoogleDrive({
   refreshLibrary: refreshSongs,
   waitUntilReady: () => appReady,
   setStatus
-});
-
-appReady.then(bindEvents).catch(() => {
-  setStatus("Die App konnte nicht initialisiert werden. Bitte lade die Seite neu.");
 });
 
 window.addEventListener("beforeunload", () => {

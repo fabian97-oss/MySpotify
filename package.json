@@ -1,6 +1,6 @@
 {
   "name": "myspotify-personal-library",
-  "version": "2.2.1",
+  "version": "2.2.2",
   "private": true,
   "type": "module",
   "description": "Persönlicher lokaler Musikplayer mit optionaler Google-Drive-Synchronisierung",

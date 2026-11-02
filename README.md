@@ -122,9 +122,24 @@ Unter dem Drive-Button wird der Ladezustand des Google-Anmeldescripts angezeigt.
 Google Identity Services wird beim App-Start geladen und nicht erst nach dem Klick. Der eigentliche `requestAccessToken()`-Aufruf erfolgt synchron im Klick-Handler, damit der Browser das Anmelde-Popup als direkte Nutzeraktion behandelt.
 
 
-## GitHub-Pages-Diagnose (Version 2.2.1)
+## GitHub-Pages-Diagnose (Version 2.2.2)
 
 Nach dem Push zuerst `https://fabian97-oss.github.io/MySpotify/diagnose.html` öffnen.
 Die Seite prüft HTTP-Status, MIME-Typ und Dateiinhalte für Index, Manifest, Service Worker und alle JavaScript-Module.
 Der App-Start verwendet einen abgefangenen dynamischen Import und zeigt Modul-/MIME-/404-Fehler direkt unter dem Drive-Button.
 In der Konsole sind zusätzlich `window.MySpotifyBoot` und nach erfolgreichem Start `MySpotifyDrive.getDiagnostics()` verfügbar.
+
+
+## Version 2.2.2 – Startfehler behoben
+
+- Initialisiert `currentView` mit `all` und `activePlaylistId` mit `null`, bevor der erste Bibliotheks-Render ausgeführt wird.
+- Übergibt `getStoredSongs()` an das Google-Drive-Modul; die Funktion wartet auf die abgeschlossene App-/IndexedDB-Initialisierung und liest dann die Songs.
+- Aktualisiert Modul-Cache-Buster und Service-Worker-Cache, damit GitHub Pages nicht mehr die fehlerhafte 2.2.1-Version wiederverwendet.
+
+
+## Version 2.2.2 – Startfehlerkorrektur
+
+- Initialisiert `currentView` und `activePlaylistId` vor dem ersten Rendering.
+- Stellt `getStoredSongs()` als asynchronen IndexedDB-Zugriff für den Drive-Abgleich bereit.
+- Der App-Bootstrap wartet jetzt auch auf die abgeschlossene IndexedDB-Initialisierung und das Binden der UI-Events, bevor er die App als bereit meldet.
+- Es werden keine IndexedDB-Daten gelöscht oder migriert; vorhandene lokale Songs bleiben unverändert.
