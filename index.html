@@ -11,8 +11,8 @@
   <title>MySpotify – Deine Musik</title>
   <link rel="icon" type="image/png" href="./assets/images/icon.png">
   <link rel="apple-touch-icon" href="./assets/images/icon.png">
-  <link rel="manifest" href="./manifest.json">
-  <link rel="stylesheet" href="./style.css">
+  <link rel="manifest" href="./manifest.json?v=2.3.0">
+  <link rel="stylesheet" href="./style.css?v=2.3.0">
 </head>
 <body>
   <header class="header">
@@ -29,8 +29,8 @@
     <section class="welcome-section">
       <div>
         <p class="eyebrow">DEINE MUSIK. DEINE REGELN.</p>
-        <h1>Deine Bibliothek</h1>
-        <p class="welcome-copy">Lokal gespeichert, jederzeit bereit.</p>
+        <h1 id="welcome-title">Deine Bibliothek</h1>
+        <p id="welcome-copy" class="welcome-copy">Lokal gespeichert, jederzeit bereit.</p>
       </div>
       <div class="welcome-note">🎧 <span>Persönlicher Musikplayer</span></div>
     </section>
@@ -40,7 +40,7 @@
         <span aria-hidden="true">⌕</span>
         <input id="search-input" type="search" placeholder="Songs und Playlists suchen …" autocomplete="off">
       </label>
-      <div class="filter-group">
+      <div id="filter-group" class="filter-group">
         <button id="show-all-button" class="filter-button active" type="button" aria-pressed="true">Alle Songs</button>
         <button id="show-favorites-button" class="filter-button" type="button" aria-pressed="false">♥ Favoriten</button>
       </div>
@@ -72,14 +72,14 @@
       <p id="upload-status" class="status" role="status" aria-live="polite">Deine Musik wird lokal gespeichert. Google Drive ist optional.</p>
       <p id="drive-status" class="drive-status" role="status" aria-live="polite">Google-Anmeldung wird vorbereitet …</p>
 
-      <section class="playlist-section" aria-labelledby="playlist-heading">
+      <section id="playlist-section" class="playlist-section" aria-labelledby="playlist-heading">
         <div class="subsection-heading">
           <h3 id="playlist-heading">Playlists</h3>
         </div>
         <div id="playlist-list" class="playlist-grid"></div>
       </section>
 
-      <section class="songs-section" aria-labelledby="songs-heading">
+      <section id="songs-section" class="songs-section" aria-labelledby="songs-heading">
         <div class="subsection-heading">
           <h3 id="songs-heading">Songs</h3>
           <span class="muted-text">Wähle einen Titel zum Abspielen</span>
@@ -102,6 +102,27 @@
       <p>MySpotify speichert deine Musik in diesem Browser. Google Drive synchronisiert deine Bibliothek optional zwischen deinen eigenen Geräten.</p>
     </footer>
   </main>
+
+  <dialog id="playlist-picker-dialog" class="playlist-picker-dialog" aria-labelledby="playlist-picker-title">
+    <div class="playlist-picker-panel">
+      <header class="playlist-picker-header">
+        <div>
+          <p class="eyebrow">DEINE SAMMLUNG</p>
+          <h2 id="playlist-picker-title">Zu Playlists hinzufügen</h2>
+          <p id="playlist-picker-song" class="playlist-picker-subtitle">Wähle eine oder mehrere Playlists aus.</p>
+        </div>
+        <button id="playlist-picker-close" class="playlist-picker-close" type="button" aria-label="Fenster schließen">×</button>
+      </header>
+      <div id="playlist-picker-grid" class="playlist-picker-grid" role="group" aria-label="Playlists auswählen"></div>
+      <footer class="playlist-picker-footer">
+        <span id="playlist-picker-count" class="playlist-picker-count" role="status" aria-live="polite">0 Playlists ausgewählt</span>
+        <div class="playlist-picker-actions">
+          <button id="playlist-picker-cancel" class="secondary-button" type="button">Abbrechen</button>
+          <button id="playlist-picker-save" class="primary-button" type="button">Übernehmen</button>
+        </div>
+      </footer>
+    </div>
+  </dialog>
 
   <section class="music-player" aria-label="Musikplayer">
     <div class="current-song">
@@ -142,7 +163,7 @@
 
   <!-- App-Start mit expliziter Fehlerdiagnose für dynamische ES-Modul-Imports. -->
   <script type="module">
-    const appVersion = "2.2.2";
+    const appVersion = "2.3.0";
     const appStatus = document.getElementById("upload-status");
     const driveStatus = document.getElementById("drive-status");
     const driveButton = document.getElementById("google-connect-button");

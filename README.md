@@ -1,3 +1,13 @@
+# MySpotify 2.3.0
+
+## Neu in 2.3.0
+
+- Die Startansicht zeigt Playlists statt der vollständigen Songliste.
+- Die vollständige Songliste und Song-Suche liegen im Navigationspunkt **Suche**.
+- Die Mediathek zeigt Playlists; Songlisten erscheinen beim Öffnen einer Playlist oder der Favoriten.
+- Songs lassen sich über einen Kachel-Dialog mehreren Playlists zuordnen. Bereits zugeordnete Playlists sind mit leicht abgedunkeltem Cover und Häkchen markiert.
+- Songs können aus einer geöffneten Playlist entfernt werden, ohne sie aus der gesamten Bibliothek zu löschen.
+
 # MySpotify
 
 Eine persönliche Musikbibliothek als installierbare Progressive Web App (PWA). Die Songs werden lokal im Browser in IndexedDB gespeichert. Optional kann dieselbe Bibliothek über Google Drive zwischen eigenen Geräten synchronisiert werden.
@@ -122,7 +132,7 @@ Unter dem Drive-Button wird der Ladezustand des Google-Anmeldescripts angezeigt.
 Google Identity Services wird beim App-Start geladen und nicht erst nach dem Klick. Der eigentliche `requestAccessToken()`-Aufruf erfolgt synchron im Klick-Handler, damit der Browser das Anmelde-Popup als direkte Nutzeraktion behandelt.
 
 
-## GitHub-Pages-Diagnose (Version 2.2.2)
+## GitHub-Pages-Diagnose (Version 2.3.0)
 
 Nach dem Push zuerst `https://fabian97-oss.github.io/MySpotify/diagnose.html` öffnen.
 Die Seite prüft HTTP-Status, MIME-Typ und Dateiinhalte für Index, Manifest, Service Worker und alle JavaScript-Module.
@@ -130,14 +140,14 @@ Der App-Start verwendet einen abgefangenen dynamischen Import und zeigt Modul-/M
 In der Konsole sind zusätzlich `window.MySpotifyBoot` und nach erfolgreichem Start `MySpotifyDrive.getDiagnostics()` verfügbar.
 
 
-## Version 2.2.2 – Startfehler behoben
+## Version 2.3.0 – Startfehler behoben
 
 - Initialisiert `currentView` mit `all` und `activePlaylistId` mit `null`, bevor der erste Bibliotheks-Render ausgeführt wird.
 - Übergibt `getStoredSongs()` an das Google-Drive-Modul; die Funktion wartet auf die abgeschlossene App-/IndexedDB-Initialisierung und liest dann die Songs.
 - Aktualisiert Modul-Cache-Buster und Service-Worker-Cache, damit GitHub Pages nicht mehr die fehlerhafte 2.2.1-Version wiederverwendet.
 
 
-## Version 2.2.2 – Startfehlerkorrektur
+## Version 2.3.0 – Startfehlerkorrektur
 
 - Initialisiert `currentView` und `activePlaylistId` vor dem ersten Rendering.
 - Stellt `getStoredSongs()` als asynchronen IndexedDB-Zugriff für den Drive-Abgleich bereit.

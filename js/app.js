@@ -1,13 +1,13 @@
 import {
   openDatabase, dbRequest, getSongs, addSong, putSong, removeSong,
   getOrCreateDeviceId
-} from "./database.js?v=2.2.2";
+} from "./database.js?v=2.3.0";
 import {
   normalizeMetadata, mergeMetadata, migrateSongMetadata,
   setFavoriteState, setCoverState
-} from "./metadata.js?v=2.2.2";
-import {MusicPlayer} from "./player.js?v=2.2.2";
-import {createGoogleDrive} from "./google-drive.js?v=2.2.2";
+} from "./metadata.js?v=2.3.0";
+import {MusicPlayer} from "./player.js?v=2.3.0";
+import {createGoogleDrive} from "./google-drive.js?v=2.3.0";
 
 const audio = document.getElementById("audio-player");
 const uploadInput = document.getElementById("music-upload");
@@ -17,6 +17,8 @@ const queueList = document.getElementById("queue-list");
 const statusText = document.getElementById("upload-status");
 const searchInput = document.getElementById("search-input");
 const sortSelect = document.getElementById("sort-select");
+const playlistPickerDialog = document.getElementById("playlist-picker-dialog");
+const playlistPickerGrid = document.getElementById("playlist-picker-grid");
 const byId = id => document.getElementById(id);
 const makeId = () => globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 const isAudioFile = file => Boolean(file?.type?.startsWith("audio/") || /\.(mp3|wav|ogg|m4a|aac|flac|opus|aiff|wma)$/i.test(file?.name || ""));
@@ -27,6 +29,9 @@ let deviceId = "";
 // UI-Zustand muss vor dem ersten renderAll() existieren (refreshSongs läuft beim Start).
 let currentView = "all";
 let activePlaylistId = null;
+let activeSection = "home"; // home | search | library
+let playlistPickerSongId = null;
+let selectedPlaylistIds = new Set();
 let player;
 let drive;
 let appReady;
@@ -210,32 +215,36 @@ function makeButton(label, className, title, onClick) {
 
 function renderPlaylists() {
   playlistList.replaceChildren();
-  const query = searchInput.value.trim().toLocaleLowerCase("de-DE");
+  const query = activeSection === "search" ? searchInput.value.trim().toLocaleLowerCase("de-DE") : "";
   const visiblePlaylists = metadata.playlists.filter(playlist => !query || playlist.name.toLocaleLowerCase("de-DE").includes(query));
+  const showFavoritesCard = !query || "meine favoriten".includes(query);
 
-  const favoritesCard = document.createElement("article");
-  favoritesCard.className = `playlist-card ${currentView === "favorites" ? "selected" : ""}`;
-  const favoritesCover = document.createElement("div");
-  favoritesCover.className = "playlist-placeholder favorite-placeholder";
-  favoritesCover.textContent = "♥";
-  const favoritesDetails = document.createElement("div");
-  favoritesDetails.className = "playlist-details";
-  const favoritesTitle = document.createElement("strong");
-  favoritesTitle.textContent = "Meine Favoriten";
-  const favoritesCount = document.createElement("span");
-  favoritesCount.className = "playlist-count";
-  favoritesCount.textContent = `${metadata.favorites.length} Songs`;
-  const favoritesOpen = makeButton("Öffnen", "small-button", "Favoriten öffnen", () => {
-    currentView = currentView === "favorites" ? "all" : "favorites";
-    activePlaylistId = null;
-    renderAll();
-  });
-  const favoritesActions = document.createElement("div");
-  favoritesActions.className = "playlist-actions";
-  favoritesActions.append(favoritesOpen);
-  favoritesDetails.append(favoritesTitle, favoritesCount, favoritesActions);
-  favoritesCard.append(favoritesCover, favoritesDetails);
-  playlistList.appendChild(favoritesCard);
+  if (showFavoritesCard) {
+    const favoritesCard = document.createElement("article");
+    favoritesCard.className = `playlist-card ${currentView === "favorites" ? "selected" : ""}`;
+    const favoritesCover = document.createElement("div");
+    favoritesCover.className = "playlist-placeholder favorite-placeholder";
+    favoritesCover.textContent = "♥";
+    const favoritesDetails = document.createElement("div");
+    favoritesDetails.className = "playlist-details";
+    const favoritesTitle = document.createElement("strong");
+    favoritesTitle.textContent = "Meine Favoriten";
+    const favoritesCount = document.createElement("span");
+    favoritesCount.className = "playlist-count";
+    favoritesCount.textContent = `${metadata.favorites.length} Songs`;
+    const favoritesOpen = makeButton(currentView === "favorites" ? "Schließen" : "Öffnen", "small-button", "Favoriten öffnen", () => {
+      currentView = currentView === "favorites" ? "all" : "favorites";
+      activePlaylistId = null;
+      activeSection = "library";
+      renderAll();
+    });
+    const favoritesActions = document.createElement("div");
+    favoritesActions.className = "playlist-actions";
+    favoritesActions.append(favoritesOpen);
+    favoritesDetails.append(favoritesTitle, favoritesCount, favoritesActions);
+    favoritesCard.append(favoritesCover, favoritesDetails);
+    playlistList.appendChild(favoritesCard);
+  }
 
   for (const playlist of visiblePlaylists) {
     const card = document.createElement("article");
@@ -262,6 +271,8 @@ function renderPlaylists() {
       makeButton(activePlaylistId === playlist.id ? "Schließen" : "Öffnen", "small-button", "Playlist öffnen", () => {
         activePlaylistId = activePlaylistId === playlist.id ? null : playlist.id;
         currentView = "all";
+        activeSection = "library";
+        searchInput.value = "";
         renderAll();
       }),
       makeButton("Umbenennen", "small-button", "Playlist umbenennen", async () => {
@@ -293,6 +304,147 @@ function renderPlaylists() {
     card.appendChild(details);
     playlistList.appendChild(card);
   }
+
+  if (query && !showFavoritesCard && visiblePlaylists.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "playlist-search-empty";
+    empty.textContent = "Keine passenden Playlists gefunden.";
+    playlistList.appendChild(empty);
+  }
+}
+
+function updatePlaylistPickerCount() {
+  const count = selectedPlaylistIds.size;
+  byId("playlist-picker-count").textContent = `${count} Playlist${count === 1 ? "" : "s"} ausgewählt`;
+  byId("playlist-picker-save").textContent = count ? `Übernehmen (${count})` : "Übernehmen";
+}
+
+function openPlaylistPicker(song) {
+  if (!metadata.playlists.length) {
+    setStatus("Erstelle zuerst eine Playlist, damit du den Song hinzufügen kannst.");
+    return;
+  }
+
+  playlistPickerSongId = song.id;
+  const key = songKey(song);
+  selectedPlaylistIds = new Set(metadata.playlists
+    .filter(playlist => playlist.songIds.includes(key))
+    .map(playlist => playlist.id));
+
+  byId("playlist-picker-song").textContent = `„${song.name}“ – wähle alle Playlists aus, in denen der Song enthalten sein soll.`;
+  playlistPickerGrid.replaceChildren();
+
+  for (const playlist of metadata.playlists) {
+    const selected = selectedPlaylistIds.has(playlist.id);
+    const tile = document.createElement("button");
+    tile.type = "button";
+    tile.className = "playlist-picker-tile";
+    tile.dataset.playlistId = playlist.id;
+    tile.setAttribute("aria-pressed", String(selected));
+
+    const art = document.createElement("span");
+    art.className = "playlist-picker-art";
+    const cover = playlist.cover ? makeImageElement(playlist.cover, "playlist-picker-cover", playlist.name) : null;
+    if (cover) art.appendChild(cover);
+    else {
+      const placeholder = document.createElement("span");
+      placeholder.className = "playlist-picker-placeholder";
+      placeholder.textContent = "♫";
+      art.appendChild(placeholder);
+    }
+    const check = document.createElement("span");
+    check.className = "playlist-picker-check";
+    check.setAttribute("aria-hidden", "true");
+    check.textContent = "✓";
+    art.appendChild(check);
+
+    const name = document.createElement("strong");
+    name.className = "playlist-picker-name";
+    name.textContent = playlist.name;
+    const count = document.createElement("span");
+    count.className = "playlist-picker-song-count";
+    count.textContent = `${playlist.songIds.length} Songs`;
+    tile.append(art, name, count);
+
+    tile.addEventListener("click", () => {
+      if (selectedPlaylistIds.has(playlist.id)) selectedPlaylistIds.delete(playlist.id);
+      else selectedPlaylistIds.add(playlist.id);
+      tile.setAttribute("aria-pressed", String(selectedPlaylistIds.has(playlist.id)));
+      updatePlaylistPickerCount();
+    });
+    playlistPickerGrid.appendChild(tile);
+  }
+
+  updatePlaylistPickerCount();
+  if (!playlistPickerDialog.open) playlistPickerDialog.showModal();
+}
+
+async function savePlaylistPickerSelection() {
+  const song = getSongById(playlistPickerSongId);
+  if (!song) {
+    playlistPickerDialog.close();
+    setStatus("Der Song ist nicht mehr in deiner Bibliothek vorhanden.");
+    return;
+  }
+
+  const key = songKey(song);
+  let added = 0;
+  let removed = 0;
+  const saveButton = byId("playlist-picker-save");
+  saveButton.disabled = true;
+
+  try {
+    for (const playlist of metadata.playlists) {
+      const hadSong = playlist.songIds.includes(key);
+      const shouldHaveSong = selectedPlaylistIds.has(playlist.id);
+      if (hadSong === shouldHaveSong) continue;
+
+      playlist.songIds = shouldHaveSong
+        ? [...new Set([...playlist.songIds, key])]
+        : playlist.songIds.filter(id => id !== key);
+      touchPlaylist(playlist);
+      if (shouldHaveSong) added += 1;
+      else removed += 1;
+    }
+
+    await persistMetadata();
+    playlistPickerDialog.close();
+    renderAll();
+    const parts = [];
+    if (added) parts.push(`zu ${added} Playlist${added === 1 ? "" : "s"} hinzugefügt`);
+    if (removed) parts.push(`aus ${removed} Playlist${removed === 1 ? "" : "s"} entfernt`);
+    setStatus(parts.length
+      ? `„${song.name}“ ${parts.join(" und ")}.`
+      : `Bei „${song.name}“ wurde nichts geändert.`);
+  } catch (error) {
+    console.error("Playlist-Zuordnung konnte nicht gespeichert werden:", error);
+    setStatus(`Playlist-Änderung fehlgeschlagen: ${error.message}`);
+  } finally {
+    saveButton.disabled = false;
+  }
+}
+
+async function removeSongFromActivePlaylist(song) {
+  const playlist = metadata.playlists.find(item => item.id === activePlaylistId);
+  if (!playlist) {
+    activePlaylistId = null;
+    renderAll();
+    return;
+  }
+
+  const key = songKey(song);
+  if (!playlist.songIds.includes(key)) return;
+  playlist.songIds = playlist.songIds.filter(id => id !== key);
+  touchPlaylist(playlist);
+
+  try {
+    await persistMetadata();
+    renderAll();
+    setStatus(`„${song.name}“ wurde aus „${playlist.name}“ entfernt. Der Song bleibt in deiner Bibliothek erhalten.`);
+  } catch (error) {
+    console.error("Song konnte nicht aus Playlist entfernt werden:", error);
+    setStatus(`Entfernen fehlgeschlagen: ${error.message}`);
+  }
 }
 
 function renderSongs() {
@@ -304,9 +456,20 @@ function renderSongs() {
     const icon = document.createElement("span");
     icon.textContent = "🎶";
     const heading = document.createElement("h3");
-    heading.textContent = songs.length ? "Keine passenden Songs" : "Noch keine Musik vorhanden";
     const message = document.createElement("p");
-    message.textContent = songs.length ? "Ändere deine Suche oder den Filter." : "Füge deine eigenen Songs hinzu.";
+    if (activePlaylistId) {
+      heading.textContent = "Diese Playlist ist leer";
+      message.textContent = "Füge über „+ Liste“ Songs hinzu oder suche weitere Titel.";
+    } else if (currentView === "favorites") {
+      heading.textContent = "Noch keine Favoriten";
+      message.textContent = "Markiere Songs mit dem Herz, um sie hier zu sammeln.";
+    } else if (songs.length) {
+      heading.textContent = "Keine passenden Songs";
+      message.textContent = "Ändere deine Suche oder den Filter.";
+    } else {
+      heading.textContent = "Noch keine Musik vorhanden";
+      message.textContent = "Füge deine eigenen Songs hinzu.";
+    }
     empty.append(icon, heading, message);
     songList.appendChild(empty);
     return;
@@ -351,26 +514,14 @@ function renderSongs() {
         await persistMetadata();
         renderAll();
       }),
-      makeButton("+ Liste", "compact-action", "Zu Playlist hinzufügen", async () => {
-        if (!metadata.playlists.length) {
-          alert("Erstelle zuerst eine Playlist.");
-          return;
-        }
-        const choice = prompt(`Playlist auswählen:\n${metadata.playlists.map((playlist, index) => `${index + 1}: ${playlist.name}`).join("\n")}\n\nNummer eingeben:`);
-        if (choice === null) return;
-        const selected = metadata.playlists[Number(choice) - 1];
-        if (!selected) return;
-        selected.songIds = [...new Set([...selected.songIds, songKey(song)])];
-        touchPlaylist(selected);
-        await persistMetadata();
-        setStatus(`„${song.name}“ wurde zu „${selected.name}“ hinzugefügt.`);
-      }),
+      makeButton("+ Liste", "compact-action", "Zu Playlists hinzufügen oder Zuordnung ändern", () => openPlaylistPicker(song)),
       makeButton("Nächste", "compact-action", "Song als Nächstes abspielen", () => {
         const added = player.enqueueNext(song);
         setStatus(added ? `„${song.name}“ zur Wiedergabewarteschlange hinzugefügt.` : "Der Song ist bereits in der Warteschlange.");
         renderQueue();
       }),
-      makeButton("Löschen", "compact-action danger-button", "Song löschen", () => deleteSong(song))
+      ...(activePlaylistId ? [makeButton("Aus Playlist entfernen", "compact-action danger-button", "Song aus dieser Playlist entfernen (bleibt in der Bibliothek)", () => removeSongFromActivePlaylist(song))] : []),
+      makeButton("Löschen", "compact-action danger-button", "Song aus der gesamten Bibliothek löschen", () => deleteSong(song))
     );
 
     item.append(info, actions);
@@ -446,13 +597,58 @@ function renderAll() {
   renderPlaylists();
   renderSongs();
   renderQueue();
-  byId("show-all-button").classList.toggle("active", currentView === "all" && !activePlaylistId);
-  byId("show-all-button").setAttribute("aria-pressed", String(currentView === "all" && !activePlaylistId));
+
+  const query = searchInput.value.trim();
+  const songsVisible = activeSection === "search" || Boolean(activePlaylistId) || currentView === "favorites";
+  const playlistSection = byId("playlist-section");
+  const songsSection = byId("songs-section");
+  const searchWrap = searchInput.closest(".search-wrap");
+  const filterGroup = byId("filter-group");
+  const createPlaylistButton = byId("create-playlist-button");
+
+  songsSection.hidden = !songsVisible;
+  playlistSection.hidden = activeSection === "search" && !query;
+  if (searchWrap) searchWrap.hidden = activeSection !== "search";
+  filterGroup.hidden = activeSection !== "search";
+  createPlaylistButton.hidden = activeSection === "search";
+
+  const welcomeTitle = byId("welcome-title");
+  const welcomeCopy = byId("welcome-copy");
+  if (activeSection === "home") {
+    welcomeTitle.textContent = "Willkommen bei MySpotify";
+    welcomeCopy.textContent = "Deine Playlists an einem Ort. Deine Songs findest du unter Suche.";
+  } else if (activeSection === "search") {
+    welcomeTitle.textContent = "Deine Songs finden";
+    welcomeCopy.textContent = "Durchsuche deine Musikbibliothek oder finde eine Playlist.";
+  } else {
+    welcomeTitle.textContent = "Deine Mediathek";
+    welcomeCopy.textContent = "Deine Playlists und Favoriten – alles an einem Ort.";
+  }
+
+  const activePlaylist = metadata.playlists.find(item => item.id === activePlaylistId);
+  byId("section-title").textContent = activePlaylist?.name
+    || (currentView === "favorites" ? "Meine Favoriten" : activeSection === "search" ? (query ? "Suchergebnisse" : "Alle Songs") : "Deine Songs");
+  byId("library-count").textContent = songsVisible
+    ? `${currentSongs().length} Songs angezeigt · ${songs.length} insgesamt`
+    : `${songs.length} Songs in deiner Bibliothek`;
+
+  const navItems = [
+    ["nav-home", "home"],
+    ["nav-search", "search"],
+    ["nav-library", "library"]
+  ];
+  for (const [id, section] of navItems) {
+    const button = byId(id);
+    const active = activeSection === section;
+    button.classList.toggle("active", active);
+    if (active) button.setAttribute("aria-current", "page");
+    else button.removeAttribute("aria-current");
+  }
+
+  byId("show-all-button").classList.toggle("active", activeSection === "search" && currentView === "all");
+  byId("show-all-button").setAttribute("aria-pressed", String(activeSection === "search" && currentView === "all"));
   byId("show-favorites-button").classList.toggle("active", currentView === "favorites");
   byId("show-favorites-button").setAttribute("aria-pressed", String(currentView === "favorites"));
-  const activePlaylist = metadata.playlists.find(item => item.id === activePlaylistId);
-  byId("section-title").textContent = activePlaylist?.name || (currentView === "favorites" ? "Meine Favoriten" : "Deine Musik");
-  byId("library-count").textContent = `${songs.length} Songs in deiner Bibliothek`;
 }
 
 function updateCurrentSong(song, error = null) {
@@ -560,6 +756,7 @@ async function createPlaylist() {
     updatedAt: Date.now(), deviceId
   });
   currentView = "all";
+  activeSection = "library";
   activePlaylistId = metadata.playlists.at(-1).id;
   await persistMetadata();
   renderAll();
@@ -568,24 +765,47 @@ async function createPlaylist() {
 function bindEvents() {
   uploadInput.addEventListener("change", handleUploads);
   byId("create-playlist-button").addEventListener("click", createPlaylist);
+  byId("playlist-picker-close").addEventListener("click", () => playlistPickerDialog.close());
+  byId("playlist-picker-cancel").addEventListener("click", () => playlistPickerDialog.close());
+  byId("playlist-picker-save").addEventListener("click", savePlaylistPickerSelection);
+  playlistPickerDialog.addEventListener("click", event => {
+    if (event.target === playlistPickerDialog) playlistPickerDialog.close();
+  });
   byId("show-all-button").addEventListener("click", () => {
     currentView = "all";
     activePlaylistId = null;
+    activeSection = "search";
     renderAll();
   });
   byId("show-favorites-button").addEventListener("click", () => {
     currentView = "favorites";
     activePlaylistId = null;
+    activeSection = "library";
+    searchInput.value = "";
     renderAll();
   });
   searchInput.addEventListener("input", renderAll);
   sortSelect.addEventListener("change", renderSongs);
   byId("nav-home").addEventListener("click", () => {
-    currentView = "all"; activePlaylistId = null; searchInput.value = ""; renderAll();
+    activeSection = "home";
+    currentView = "all";
+    activePlaylistId = null;
+    searchInput.value = "";
+    renderAll();
   });
-  byId("nav-search").addEventListener("click", () => searchInput.focus());
+  byId("nav-search").addEventListener("click", () => {
+    activeSection = "search";
+    currentView = "all";
+    activePlaylistId = null;
+    renderAll();
+    searchInput.focus();
+  });
   byId("nav-library").addEventListener("click", () => {
-    currentView = "all"; activePlaylistId = null; renderAll();
+    activeSection = "library";
+    currentView = "all";
+    activePlaylistId = null;
+    searchInput.value = "";
+    renderAll();
   });
   byId("play-btn").addEventListener("click", () => {
     if (!player.currentSongId && player.queueIds.length === 0) {
@@ -700,7 +920,7 @@ window.addEventListener("beforeunload", () => {
 
 // Kleine, bewusst lesbare Debug-Schnittstelle für lokale Fehlersuche.
 window.MySpotify = {
-  getState: () => ({songCount: songs.length, currentSongId: player?.currentSongId ?? null, playlistCount: metadata.playlists.length, initialized: Boolean(player)}),
+  getState: () => ({songCount: songs.length, currentSongId: player?.currentSongId ?? null, playlistCount: metadata.playlists.length, initialized: Boolean(player), activeSection, activePlaylistId}),
   sync: () => drive.synchronizeSongs(),
   connectGoogleDrive: () => drive.connect()
 };
