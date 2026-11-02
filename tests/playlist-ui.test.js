@@ -48,7 +48,7 @@ test("Song aus geöffneter Playlist entfernen löscht ihn nicht aus der Biblioth
 test("Start zeigt Playlist-Kacheln zuerst und Songs hinzufügen am Seitenende", async () => {
   const [app, html] = await Promise.all([read("js/app.js"), read("index.html")]);
   assert.match(app, /let activeSection = "home"/);
-  assert.match(app, /const songsVisible = search \|\| \(library && \(Boolean\(activePlaylistId\) \|\| currentView === "favorites"\)\)/);
+  assert.match(app, /const songsVisible = search \|\| playlistDetailOpen/);
   assert.match(app, /byId\("songs-section"\)\.hidden = !songsVisible/);
   assert.match(app, /byId\("welcome-section"\)\.hidden = home/);
   assert.match(app, /byId\("home-actions-section"\)\.hidden = !home/);
@@ -82,4 +82,49 @@ test("Nach erfolgreicher Google-Verbindung wird der Textbutton durch das Sync-Sy
   assert.match(drive, /myspotify-drive-connected/);
   assert.match(app, /window\.addEventListener\("myspotify-drive-connected"/);
   assert.match(app, /updateDriveControls\("connected"\)/);
+});
+
+
+test("Playlist-Cover und Name öffnen dieselbe Playlist über eine große Kachel-Schaltfläche", async () => {
+  const app = await read("js/app.js");
+  const createCard = app.slice(app.indexOf("function createPlaylistCard"), app.indexOf("function renderPlaylists"));
+  assert.match(createCard, /openButton\.className = "playlist-card-open"/);
+  assert.match(createCard, /artwork\.appendChild\(image\)/);
+  assert.match(createCard, /details\.append\(title, songCount\)/);
+  assert.match(createCard, /openButton\.append\(artwork, details\)/);
+  assert.match(createCard, /openButton\.addEventListener\("click"[\s\S]*?openPlaylist\(id\)/);
+});
+
+test("Playlist-Kacheln enthalten keine Verwaltungsaktionen mehr", async () => {
+  const app = await read("js/app.js");
+  const render = app.slice(app.indexOf("function renderPlaylists"), app.indexOf("async function renameActivePlaylist"));
+  assert.doesNotMatch(render, /Umbenennen|Cover ändern|Playlist löschen|makeButton\(/);
+  assert.match(render, /createPlaylistCard\(/);
+});
+
+test("Umbenennen, Cover ändern und Löschen sind nur in der Playlist-Detailansicht erreichbar", async () => {
+  const [app, html] = await Promise.all([read("js/app.js"), read("index.html")]);
+  assert.match(html, /id="playlist-detail-actions"[^>]+hidden/);
+  assert.match(html, /id="playlist-rename-button"/);
+  assert.match(html, /id="playlist-cover-button"/);
+  assert.match(html, /id="playlist-delete-button"/);
+  assert.match(app, /byId\("playlist-detail-actions"\)\.hidden = !library \|\| !activePlaylist/);
+  assert.match(app, /byId\("playlist-rename-button"\)\.addEventListener\("click", renameActivePlaylist\)/);
+  assert.match(app, /byId\("playlist-cover-button"\)\.addEventListener\("click", changeActivePlaylistCover\)/);
+  assert.match(app, /byId\("playlist-delete-button"\)\.addEventListener\("click", deleteActivePlaylist\)/);
+});
+
+test("Playlist-Detailansicht hat Zurück-Navigation und blendet das Kachel-Grid aus", async () => {
+  const [app, html] = await Promise.all([read("js/app.js"), read("index.html")]);
+  assert.match(html, /id="playlist-back-button"[^>]+hidden/);
+  assert.match(app, /function closePlaylistDetail\(\)/);
+  assert.match(app, /byId\("playlist-back-button"\)\.addEventListener\("click", closePlaylistDetail\)/);
+  assert.match(app, /playlistList\.hidden = playlistDetailOpen/);
+  assert.match(app, /activeSection = "library";[\s\S]*?renderAll\(\)/);
+});
+
+test("Playlist-Übersicht wird als responsives Grid dargestellt", async () => {
+  const css = await read("style.css");
+  assert.match(css, /\.playlist-grid\s*\{[\s\S]*?grid-template-columns:\s*repeat\(auto-fill, minmax\(160px, 1fr\)\)/);
+  assert.match(css, /@media \(max-width: 560px\)[\s\S]*?\.playlist-grid\s*\{\s*grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\)/);
 });

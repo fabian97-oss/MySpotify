@@ -1,14 +1,14 @@
-const CACHE_NAME = "myspotify-v11";
+const CACHE_NAME = "myspotify-v12";
 const APP_SHELL = [
   "./",
   "./index.html",
-  "./style.css?v=2.4.0",
-  "./manifest.json?v=2.4.0",
-  "./js/app.js?v=2.4.0",
-  "./js/database.js?v=2.4.0",
-  "./js/metadata.js?v=2.4.0",
-  "./js/player.js?v=2.4.0",
-  "./js/google-drive.js?v=2.4.0",
+  "./style.css?v=2.5.0",
+  "./manifest.json?v=2.5.0",
+  "./js/app.js?v=2.5.0",
+  "./js/database.js?v=2.5.0",
+  "./js/metadata.js?v=2.5.0",
+  "./js/player.js?v=2.5.0",
+  "./js/google-drive.js?v=2.5.0",
   "./assets/images/icon.png"
 ];
 

@@ -1,4 +1,4 @@
-import {mergeMetadata} from "./metadata.js?v=2.4.0";
+import {mergeMetadata} from "./metadata.js?v=2.5.0";
 
 const GOOGLE_CLIENT_ID = "549476284025-chhtts628n343481h3ipoomikrkmem2q.apps.googleusercontent.com";
 const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";

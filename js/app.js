@@ -1,13 +1,13 @@
 import {
   openDatabase, dbRequest, getSongs, addSong, putSong, removeSong,
   getOrCreateDeviceId
-} from "./database.js?v=2.4.0";
+} from "./database.js?v=2.5.0";
 import {
   normalizeMetadata, mergeMetadata, migrateSongMetadata,
   setFavoriteState, setCoverState
-} from "./metadata.js?v=2.4.0";
-import {MusicPlayer} from "./player.js?v=2.4.0";
-import {createGoogleDrive} from "./google-drive.js?v=2.4.0";
+} from "./metadata.js?v=2.5.0";
+import {MusicPlayer} from "./player.js?v=2.5.0";
+import {createGoogleDrive} from "./google-drive.js?v=2.5.0";
 
 const audio = document.getElementById("audio-player");
 const uploadInput = document.getElementById("music-upload");
@@ -262,6 +262,60 @@ function makeButton(label, className, title, onClick) {
   return button;
 }
 
+function openPlaylist(playlistId) {
+  activePlaylistId = playlistId;
+  currentView = "all";
+  activeSection = "library";
+  searchInput.value = "";
+  renderAll();
+  window.scrollTo({top: 0, behavior: "smooth"});
+}
+
+function openFavorites() {
+  activePlaylistId = null;
+  currentView = "favorites";
+  activeSection = "library";
+  searchInput.value = "";
+  renderAll();
+  window.scrollTo({top: 0, behavior: "smooth"});
+}
+
+function createPlaylistCard({id, name, count, cover, favorite = false, selected = false}) {
+  const card = document.createElement("article");
+  card.className = `playlist-card${selected ? " selected" : ""}`;
+  if (id) card.dataset.playlistId = id;
+
+  const openButton = document.createElement("button");
+  openButton.type = "button";
+  openButton.className = "playlist-card-open";
+  openButton.setAttribute("aria-label", `${name} öffnen`);
+  openButton.title = `${name} öffnen`;
+
+  const artwork = document.createElement("div");
+  artwork.className = `playlist-card-art${favorite ? " favorite-placeholder" : ""}`;
+  const image = cover ? makeImageElement(cover, "playlist-cover", `${name} Cover`) : null;
+  if (image) artwork.appendChild(image);
+  else {
+    const placeholder = document.createElement("span");
+    placeholder.className = `playlist-placeholder${favorite ? " favorite-placeholder" : ""}`;
+    placeholder.textContent = favorite ? "♥" : "♫";
+    artwork.appendChild(placeholder);
+  }
+
+  const details = document.createElement("span");
+  details.className = "playlist-details";
+  const title = document.createElement("strong");
+  title.textContent = name;
+  const songCount = document.createElement("span");
+  songCount.className = "playlist-count";
+  songCount.textContent = `${count} Songs`;
+  details.append(title, songCount);
+  openButton.append(artwork, details);
+  openButton.addEventListener("click", () => favorite ? openFavorites() : openPlaylist(id));
+  card.appendChild(openButton);
+  return card;
+}
+
 function renderPlaylists() {
   playlistList.replaceChildren();
   const query = activeSection === "search" ? searchInput.value.trim().toLocaleLowerCase("de-DE") : "";
@@ -269,89 +323,22 @@ function renderPlaylists() {
   const showFavoritesCard = !query || "meine favoriten".includes(query);
 
   if (showFavoritesCard) {
-    const favoritesCard = document.createElement("article");
-    favoritesCard.className = `playlist-card ${currentView === "favorites" ? "selected" : ""}`;
-    const favoritesCover = document.createElement("div");
-    favoritesCover.className = "playlist-placeholder favorite-placeholder";
-    favoritesCover.textContent = "♥";
-    const favoritesDetails = document.createElement("div");
-    favoritesDetails.className = "playlist-details";
-    const favoritesTitle = document.createElement("strong");
-    favoritesTitle.textContent = "Meine Favoriten";
-    const favoritesCount = document.createElement("span");
-    favoritesCount.className = "playlist-count";
-    favoritesCount.textContent = `${metadata.favorites.length} Songs`;
-    const favoritesOpen = makeButton(currentView === "favorites" ? "Schließen" : "Öffnen", "small-button", "Favoriten öffnen", () => {
-      currentView = currentView === "favorites" ? "all" : "favorites";
-      activePlaylistId = null;
-      activeSection = "library";
-      renderAll();
-    });
-    const favoritesActions = document.createElement("div");
-    favoritesActions.className = "playlist-actions";
-    favoritesActions.append(favoritesOpen);
-    favoritesDetails.append(favoritesTitle, favoritesCount, favoritesActions);
-    favoritesCard.append(favoritesCover, favoritesDetails);
-    playlistList.appendChild(favoritesCard);
+    playlistList.appendChild(createPlaylistCard({
+      name: "Meine Favoriten",
+      count: metadata.favorites.length,
+      favorite: true,
+      selected: currentView === "favorites" && activeSection === "library"
+    }));
   }
 
   for (const playlist of visiblePlaylists) {
-    const card = document.createElement("article");
-    card.className = `playlist-card ${activePlaylistId === playlist.id ? "selected" : ""}`;
-    const cover = playlist.cover ? makeImageElement(playlist.cover, "playlist-cover", playlist.name) : null;
-    if (cover) card.appendChild(cover);
-    else {
-      const placeholder = document.createElement("div");
-      placeholder.className = "playlist-placeholder";
-      placeholder.textContent = "♫";
-      card.appendChild(placeholder);
-    }
-
-    const details = document.createElement("div");
-    details.className = "playlist-details";
-    const title = document.createElement("strong");
-    title.textContent = playlist.name;
-    const count = document.createElement("span");
-    count.className = "playlist-count";
-    count.textContent = `${playlist.songIds.length} Songs`;
-    const actions = document.createElement("div");
-    actions.className = "playlist-actions";
-    actions.append(
-      makeButton(activePlaylistId === playlist.id ? "Schließen" : "Öffnen", "small-button", "Playlist öffnen", () => {
-        activePlaylistId = activePlaylistId === playlist.id ? null : playlist.id;
-        currentView = "all";
-        activeSection = "library";
-        searchInput.value = "";
-        renderAll();
-      }),
-      makeButton("Umbenennen", "small-button", "Playlist umbenennen", async () => {
-        const name = prompt("Neuer Playlistname:", playlist.name);
-        if (!name?.trim()) return;
-        playlist.name = name.trim().slice(0, 100);
-        touchPlaylist(playlist);
-        await persistMetadata();
-        renderAll();
-      }),
-      makeButton("Cover", "small-button", "Playlist-Cover ändern", async () => {
-        const coverData = await chooseImage();
-        if (!coverData) return;
-        playlist.cover = coverData;
-        touchPlaylist(playlist);
-        await persistMetadata();
-        renderAll();
-      }),
-      makeButton("Löschen", "small-button danger-button", "Playlist löschen", async () => {
-        if (!confirm(`Playlist „${playlist.name}“ wirklich löschen? Die Songs bleiben erhalten.`)) return;
-        metadata.deletedPlaylistIds[playlist.id] = {deletedAt: Date.now(), deviceId};
-        metadata.playlists = metadata.playlists.filter(item => item.id !== playlist.id);
-        if (activePlaylistId === playlist.id) activePlaylistId = null;
-        await persistMetadata();
-        renderAll();
-      })
-    );
-    details.append(title, count, actions);
-    card.appendChild(details);
-    playlistList.appendChild(card);
+    playlistList.appendChild(createPlaylistCard({
+      id: playlist.id,
+      name: playlist.name,
+      count: playlist.songIds.length,
+      cover: playlist.cover,
+      selected: activePlaylistId === playlist.id
+    }));
   }
 
   if (query && !showFavoritesCard && visiblePlaylists.length === 0) {
@@ -360,6 +347,67 @@ function renderPlaylists() {
     empty.textContent = "Keine passenden Playlists gefunden.";
     playlistList.appendChild(empty);
   }
+}
+
+async function renameActivePlaylist() {
+  const playlist = metadata.playlists.find(item => item.id === activePlaylistId);
+  if (!playlist) return;
+  const name = prompt("Neuer Playlistname:", playlist.name);
+  if (!name?.trim()) return;
+  playlist.name = name.trim().slice(0, 100);
+  touchPlaylist(playlist);
+  try {
+    await persistMetadata();
+    renderAll();
+    setStatus(`Playlist wurde in „${playlist.name}“ umbenannt.`);
+  } catch (error) {
+    console.error("Playlist konnte nicht umbenannt werden:", error);
+    setStatus(`Umbenennen fehlgeschlagen: ${error.message}`);
+  }
+}
+
+async function changeActivePlaylistCover() {
+  const playlist = metadata.playlists.find(item => item.id === activePlaylistId);
+  if (!playlist) return;
+  const coverData = await chooseImage();
+  if (!coverData) return;
+  playlist.cover = coverData;
+  touchPlaylist(playlist);
+  try {
+    await persistMetadata();
+    renderAll();
+    setStatus(`Cover für „${playlist.name}“ wurde aktualisiert.`);
+  } catch (error) {
+    console.error("Playlist-Cover konnte nicht gespeichert werden:", error);
+    setStatus(`Cover konnte nicht gespeichert werden: ${error.message}`);
+  }
+}
+
+async function deleteActivePlaylist() {
+  const playlist = metadata.playlists.find(item => item.id === activePlaylistId);
+  if (!playlist) return;
+  if (!confirm(`Playlist „${playlist.name}“ wirklich löschen? Die Songs bleiben in deiner Bibliothek erhalten.`)) return;
+  metadata.deletedPlaylistIds[playlist.id] = {deletedAt: Date.now(), deviceId};
+  metadata.playlists = metadata.playlists.filter(item => item.id !== playlist.id);
+  activePlaylistId = null;
+  currentView = "all";
+  activeSection = "library";
+  try {
+    await persistMetadata();
+    renderAll();
+    setStatus(`Playlist „${playlist.name}“ wurde gelöscht. Die Songs bleiben erhalten.`);
+  } catch (error) {
+    console.error("Playlist konnte nicht gelöscht werden:", error);
+    setStatus(`Löschen fehlgeschlagen: ${error.message}`);
+  }
+}
+
+function closePlaylistDetail() {
+  activePlaylistId = null;
+  currentView = "all";
+  activeSection = "library";
+  searchInput.value = "";
+  renderAll();
 }
 
 function updatePlaylistPickerCount() {
@@ -651,13 +699,18 @@ function renderAll() {
   const home = activeSection === "home";
   const search = activeSection === "search";
   const library = activeSection === "library";
-  const songsVisible = search || (library && (Boolean(activePlaylistId) || currentView === "favorites"));
+  const activePlaylist = metadata.playlists.find(item => item.id === activePlaylistId) || null;
+  const playlistDetailOpen = library && (Boolean(activePlaylist) || currentView === "favorites");
+  const songsVisible = search || playlistDetailOpen;
 
   byId("welcome-section").hidden = home;
   byId("library-tools").hidden = !search;
   byId("songs-section").hidden = !songsVisible;
   byId("playlist-section").hidden = search && !query;
-  byId("create-playlist-button").hidden = !library;
+  playlistList.hidden = playlistDetailOpen;
+  byId("playlist-back-button").hidden = !playlistDetailOpen;
+  byId("playlist-detail-actions").hidden = !library || !activePlaylist;
+  byId("create-playlist-button").hidden = !library || playlistDetailOpen;
   byId("home-actions-section").hidden = !home;
 
   const welcomeTitle = byId("welcome-title");
@@ -666,15 +719,16 @@ function renderAll() {
     welcomeTitle.textContent = "Deine Songs finden";
     welcomeCopy.textContent = "Durchsuche deine Musikbibliothek oder finde eine Playlist.";
   } else if (library) {
-    welcomeTitle.textContent = "Deine Mediathek";
-    welcomeCopy.textContent = "Verwalte deine Playlists und Favoriten.";
+    welcomeTitle.textContent = activePlaylist?.name || (currentView === "favorites" ? "Meine Favoriten" : "Deine Mediathek");
+    welcomeCopy.textContent = activePlaylist
+      ? `${activePlaylist.songIds.length} Songs in dieser Playlist.`
+      : currentView === "favorites" ? "Deine mit ♥ markierten Songs." : "Deine Playlists und Favoriten an einem Ort.";
   }
 
-  const activePlaylist = metadata.playlists.find(item => item.id === activePlaylistId);
   byId("section-title").textContent = activePlaylist?.name
-    || (currentView === "favorites" ? "Meine Favoriten" : search ? (query ? "Suchergebnisse" : "Alle Songs") : "Deine Playlists");
+    || (currentView === "favorites" && library ? "Meine Favoriten" : search ? (query ? "Suchergebnisse" : "Alle Songs") : "Deine Playlists");
   byId("library-count").textContent = songsVisible
-    ? `${currentSongs().length} Songs angezeigt · ${songs.length} insgesamt`
+    ? `${currentSongs().length} Songs${activePlaylist ? ` in „${activePlaylist.name}“` : currentView === "favorites" ? " in deinen Favoriten" : " gefunden"}`
     : `${metadata.playlists.length} Playlists · ${songs.length} Songs insgesamt`;
 
   const songsHeading = byId("songs-heading");
@@ -701,6 +755,7 @@ function renderAll() {
   byId("show-favorites-button").classList.toggle("active", currentView === "favorites");
   byId("show-favorites-button").setAttribute("aria-pressed", String(currentView === "favorites"));
 }
+
 function updateCurrentSong(song, error = null) {
   if (!song) {
     byId("current-title").textContent = "Kein Song ausgewählt";
@@ -815,6 +870,10 @@ async function createPlaylist() {
 function bindEvents() {
   uploadInput.addEventListener("change", handleUploads);
   byId("create-playlist-button").addEventListener("click", createPlaylist);
+  byId("playlist-back-button").addEventListener("click", closePlaylistDetail);
+  byId("playlist-rename-button").addEventListener("click", renameActivePlaylist);
+  byId("playlist-cover-button").addEventListener("click", changeActivePlaylistCover);
+  byId("playlist-delete-button").addEventListener("click", deleteActivePlaylist);
   byId("playlist-picker-close").addEventListener("click", () => playlistPickerDialog.close());
   byId("playlist-picker-cancel").addEventListener("click", () => playlistPickerDialog.close());
   byId("playlist-picker-save").addEventListener("click", savePlaylistPickerSelection);

@@ -163,3 +163,13 @@ In der Konsole sind zusätzlich `window.MySpotifyBoot` und nach erfolgreichem St
 - Beim ersten Start erscheint eine Auswahl zwischen Google Drive und lokaler Nutzung.
 - Die Auswahl wird lokal im Browser gemerkt. Nach erfolgreicher Verbindung ersetzt ein Synchronisationssymbol den Textbutton.
 - Hinweis: Die aktuelle Google-Identity-Token-Verbindung ist weiterhin sitzungsgebunden. Ein gespeicherter Cloud-Wunsch ersetzt noch keine serverseitige Refresh-Token-Verwaltung; diese wird separat mit Cloudflare umgesetzt.
+
+
+## Version 2.5.0
+
+- Playlist-Kacheln sind vollständig anklickbar: Cover und Name öffnen die Playlist.
+- Playlists werden als responsives Grid angezeigt.
+- Umbenennen, Cover ändern und Löschen befinden sich ausschließlich in der geöffneten Playlist-Detailansicht.
+- Die Detailansicht hat eine Zurück-Schaltfläche zur Playlist-Übersicht.
+- Playlist-Datenstruktur und IndexedDB-Schema bleiben unverändert.
+- Service-Worker-Cache auf `myspotify-v12` aktualisiert.
