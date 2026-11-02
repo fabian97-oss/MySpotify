@@ -1,13 +1,13 @@
 import {
   openDatabase, dbRequest, getSongs, addSong, putSong, removeSong,
   getOrCreateDeviceId
-} from "./database.js?v=2.3.0";
+} from "./database.js?v=2.4.0";
 import {
   normalizeMetadata, mergeMetadata, migrateSongMetadata,
   setFavoriteState, setCoverState
-} from "./metadata.js?v=2.3.0";
-import {MusicPlayer} from "./player.js?v=2.3.0";
-import {createGoogleDrive} from "./google-drive.js?v=2.3.0";
+} from "./metadata.js?v=2.4.0";
+import {MusicPlayer} from "./player.js?v=2.4.0";
+import {createGoogleDrive} from "./google-drive.js?v=2.4.0";
 
 const audio = document.getElementById("audio-player");
 const uploadInput = document.getElementById("music-upload");
@@ -36,6 +36,55 @@ let player;
 let drive;
 let appReady;
 const objectUrls = new Map();
+const DRIVE_CHOICE_KEY = "myspotify-drive-choice-v1";
+
+function getDriveChoice() {
+  try {
+    const value = localStorage.getItem(DRIVE_CHOICE_KEY);
+    return value === "local" || value === "cloud" ? value : null;
+  } catch (error) {
+    console.warn("Drive-Einstellung kann nicht gelesen werden:", error);
+    return null;
+  }
+}
+
+function saveDriveChoice(value) {
+  try { localStorage.setItem(DRIVE_CHOICE_KEY, value); }
+  catch (error) { console.warn("Drive-Einstellung kann nicht gespeichert werden:", error); }
+}
+
+function updateDriveControls(connectionState = "idle") {
+  const choice = getDriveChoice();
+  const connectButton = byId("google-connect-button");
+  const syncButton = byId("drive-sync-button");
+  if (connectButton) connectButton.hidden = choice !== "local";
+  if (syncButton) {
+    syncButton.hidden = choice !== "cloud";
+    syncButton.dataset.state = connectionState;
+    syncButton.classList.toggle("is-connected", connectionState === "connected");
+    syncButton.setAttribute("aria-label", connectionState === "connected"
+      ? "Google Drive synchronisieren"
+      : "Google Drive verbinden oder erneut autorisieren");
+    syncButton.title = connectionState === "connected"
+      ? "Google Drive ist verbunden – jetzt synchronisieren"
+      : "Google Drive ist ausgewählt – tippen zum Verbinden oder Synchronisieren";
+  }
+}
+
+function initializeDriveChoice() {
+  const dialog = byId("drive-choice-dialog");
+  const choice = getDriveChoice();
+  updateDriveControls(choice === "cloud" ? "remembered" : "idle");
+
+  if (!choice && dialog && !dialog.open) dialog.showModal();
+  if (choice === "local") {
+    byId("drive-status").textContent = "Du nutzt MySpotify lokal. Google Drive kannst du unten jederzeit verbinden.";
+    byId("drive-status").dataset.state = "info";
+  } else if (choice === "cloud") {
+    byId("drive-status").textContent = "Google Drive ist ausgewählt. Tippe unten auf das Synchronisationssymbol, um die Verbindung herzustellen oder zu synchronisieren.";
+    byId("drive-status").dataset.state = "info";
+  }
+}
 
 function setStatus(message) {
   if (statusText) statusText.textContent = message;
@@ -599,38 +648,40 @@ function renderAll() {
   renderQueue();
 
   const query = searchInput.value.trim();
-  const songsVisible = activeSection === "search" || Boolean(activePlaylistId) || currentView === "favorites";
-  const playlistSection = byId("playlist-section");
-  const songsSection = byId("songs-section");
-  const searchWrap = searchInput.closest(".search-wrap");
-  const filterGroup = byId("filter-group");
-  const createPlaylistButton = byId("create-playlist-button");
+  const home = activeSection === "home";
+  const search = activeSection === "search";
+  const library = activeSection === "library";
+  const songsVisible = search || (library && (Boolean(activePlaylistId) || currentView === "favorites"));
 
-  songsSection.hidden = !songsVisible;
-  playlistSection.hidden = activeSection === "search" && !query;
-  if (searchWrap) searchWrap.hidden = activeSection !== "search";
-  filterGroup.hidden = activeSection !== "search";
-  createPlaylistButton.hidden = activeSection === "search";
+  byId("welcome-section").hidden = home;
+  byId("library-tools").hidden = !search;
+  byId("songs-section").hidden = !songsVisible;
+  byId("playlist-section").hidden = search && !query;
+  byId("create-playlist-button").hidden = !library;
+  byId("home-actions-section").hidden = !home;
 
   const welcomeTitle = byId("welcome-title");
   const welcomeCopy = byId("welcome-copy");
-  if (activeSection === "home") {
-    welcomeTitle.textContent = "Willkommen bei MySpotify";
-    welcomeCopy.textContent = "Deine Playlists an einem Ort. Deine Songs findest du unter Suche.";
-  } else if (activeSection === "search") {
+  if (search) {
     welcomeTitle.textContent = "Deine Songs finden";
     welcomeCopy.textContent = "Durchsuche deine Musikbibliothek oder finde eine Playlist.";
-  } else {
+  } else if (library) {
     welcomeTitle.textContent = "Deine Mediathek";
-    welcomeCopy.textContent = "Deine Playlists und Favoriten – alles an einem Ort.";
+    welcomeCopy.textContent = "Verwalte deine Playlists und Favoriten.";
   }
 
   const activePlaylist = metadata.playlists.find(item => item.id === activePlaylistId);
   byId("section-title").textContent = activePlaylist?.name
-    || (currentView === "favorites" ? "Meine Favoriten" : activeSection === "search" ? (query ? "Suchergebnisse" : "Alle Songs") : "Deine Songs");
+    || (currentView === "favorites" ? "Meine Favoriten" : search ? (query ? "Suchergebnisse" : "Alle Songs") : "Deine Playlists");
   byId("library-count").textContent = songsVisible
     ? `${currentSongs().length} Songs angezeigt · ${songs.length} insgesamt`
-    : `${songs.length} Songs in deiner Bibliothek`;
+    : `${metadata.playlists.length} Playlists · ${songs.length} Songs insgesamt`;
+
+  const songsHeading = byId("songs-heading");
+  if (songsHeading) {
+    songsHeading.textContent = activePlaylist?.name
+      || (currentView === "favorites" ? "Meine Favoriten" : search ? (query ? "Suchergebnisse" : "Alle Songs") : "Songs");
+  }
 
   const navItems = [
     ["nav-home", "home"],
@@ -645,12 +696,11 @@ function renderAll() {
     else button.removeAttribute("aria-current");
   }
 
-  byId("show-all-button").classList.toggle("active", activeSection === "search" && currentView === "all");
-  byId("show-all-button").setAttribute("aria-pressed", String(activeSection === "search" && currentView === "all"));
+  byId("show-all-button").classList.toggle("active", search && currentView === "all");
+  byId("show-all-button").setAttribute("aria-pressed", String(search && currentView === "all"));
   byId("show-favorites-button").classList.toggle("active", currentView === "favorites");
   byId("show-favorites-button").setAttribute("aria-pressed", String(currentView === "favorites"));
 }
-
 function updateCurrentSong(song, error = null) {
   if (!song) {
     byId("current-title").textContent = "Kein Song ausgewählt";
@@ -771,6 +821,82 @@ function bindEvents() {
   playlistPickerDialog.addEventListener("click", event => {
     if (event.target === playlistPickerDialog) playlistPickerDialog.close();
   });
+
+  byId("drive-choice-local").addEventListener("click", () => {
+    saveDriveChoice("local");
+    byId("drive-choice-dialog").close();
+    updateDriveControls("idle");
+    byId("drive-status").textContent = "Du nutzt MySpotify lokal. Google Drive kannst du unten jederzeit verbinden.";
+    byId("drive-status").dataset.state = "info";
+  });
+
+  byId("drive-choice-connect").addEventListener("click", async () => {
+    const button = byId("drive-choice-connect");
+    const status = byId("drive-choice-status");
+    if (!drive) {
+      status.textContent = "Google Drive wird noch initialisiert. Bitte gleich erneut versuchen.";
+      return;
+    }
+    button.disabled = true;
+    button.textContent = "Google Drive wird geöffnet …";
+    status.textContent = "Das Google-Anmeldefenster sollte jetzt erscheinen.";
+    try {
+      await drive.connect();
+      if (drive.isConnected()) {
+        saveDriveChoice("cloud");
+        byId("drive-choice-dialog").close();
+        updateDriveControls("connected");
+      } else {
+        status.textContent = byId("drive-status").textContent || "Die Verbindung wurde noch nicht abgeschlossen. Du kannst es erneut versuchen oder lokal bleiben.";
+      }
+    } catch (error) {
+      status.textContent = `Google Drive konnte nicht verbunden werden: ${error.message}`;
+    } finally {
+      button.disabled = false;
+      button.textContent = "☁ Mit Google Drive verbinden";
+    }
+  });
+
+  byId("drive-choice-dialog").addEventListener("cancel", event => {
+    // Escape entspricht der sicheren und eindeutigen Auswahl „Lokal bleiben“.
+    event.preventDefault();
+    saveDriveChoice("local");
+    byId("drive-choice-dialog").close();
+    updateDriveControls("idle");
+    byId("drive-status").textContent = "Du nutzt MySpotify lokal. Google Drive kannst du unten jederzeit verbinden.";
+    byId("drive-status").dataset.state = "info";
+  });
+
+  byId("drive-sync-button").addEventListener("click", async () => {
+    const button = byId("drive-sync-button");
+    if (!drive || button.dataset.busy === "true") return;
+    button.dataset.busy = "true";
+    button.disabled = true;
+    button.setAttribute("aria-busy", "true");
+    const icon = button.querySelector(".drive-sync-icon");
+    if (icon) icon.textContent = "…";
+    try {
+      await drive.connect();
+      updateDriveControls(drive.isConnected() ? "connected" : "remembered");
+    } finally {
+      button.dataset.busy = "false";
+      button.disabled = false;
+      button.removeAttribute("aria-busy");
+      if (icon) icon.textContent = "↻";
+    }
+  });
+
+  window.addEventListener("myspotify-drive-connected", () => {
+    saveDriveChoice("cloud");
+    byId("drive-choice-dialog")?.close();
+    updateDriveControls("connected");
+    const choiceStatus = byId("drive-choice-status");
+    if (choiceStatus) choiceStatus.textContent = "Google Drive ist verbunden.";
+  });
+
+  window.addEventListener("myspotify-drive-session-expired", () => {
+    if (getDriveChoice() === "cloud") updateDriveControls("remembered");
+  });
   byId("show-all-button").addEventListener("click", () => {
     currentView = "all";
     activePlaylistId = null;
@@ -859,6 +985,7 @@ function bindEvents() {
       player.next();
     }
   });
+  initializeDriveChoice();
 }
 
 async function initializeApp() {
@@ -920,7 +1047,7 @@ window.addEventListener("beforeunload", () => {
 
 // Kleine, bewusst lesbare Debug-Schnittstelle für lokale Fehlersuche.
 window.MySpotify = {
-  getState: () => ({songCount: songs.length, currentSongId: player?.currentSongId ?? null, playlistCount: metadata.playlists.length, initialized: Boolean(player), activeSection, activePlaylistId}),
+  getState: () => ({songCount: songs.length, currentSongId: player?.currentSongId ?? null, playlistCount: metadata.playlists.length, initialized: Boolean(player), activeSection, activePlaylistId, driveChoice: getDriveChoice()}),
   sync: () => drive.synchronizeSongs(),
   connectGoogleDrive: () => drive.connect()
 };

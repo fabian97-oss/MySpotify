@@ -11,8 +11,8 @@
   <title>MySpotify – Deine Musik</title>
   <link rel="icon" type="image/png" href="./assets/images/icon.png">
   <link rel="apple-touch-icon" href="./assets/images/icon.png">
-  <link rel="manifest" href="./manifest.json?v=2.3.0">
-  <link rel="stylesheet" href="./style.css?v=2.3.0">
+  <link rel="manifest" href="./manifest.json?v=2.4.0">
+  <link rel="stylesheet" href="./style.css?v=2.4.0">
 </head>
 <body>
   <header class="header">
@@ -26,7 +26,7 @@
   </header>
 
   <main class="main-content" id="home">
-    <section class="welcome-section">
+    <section id="welcome-section" class="welcome-section">
       <div>
         <p class="eyebrow">DEINE MUSIK. DEINE REGELN.</p>
         <h1 id="welcome-title">Deine Bibliothek</h1>
@@ -35,7 +35,7 @@
       <div class="welcome-note">🎧 <span>Persönlicher Musikplayer</span></div>
     </section>
 
-    <section class="library-tools" aria-label="Bibliothek steuern">
+    <section id="library-tools" class="library-tools" aria-label="Musik suchen" hidden>
       <label class="search-wrap" for="search-input">
         <span aria-hidden="true">⌕</span>
         <input id="search-input" type="search" placeholder="Songs und Playlists suchen …" autocomplete="off">
@@ -44,64 +44,88 @@
         <button id="show-all-button" class="filter-button active" type="button" aria-pressed="true">Alle Songs</button>
         <button id="show-favorites-button" class="filter-button" type="button" aria-pressed="false">♥ Favoriten</button>
       </div>
-      <button id="create-playlist-button" class="primary-button" type="button">＋ Playlist erstellen</button>
     </section>
 
-    <section class="music-section" aria-labelledby="section-title">
-      <div class="section-heading">
-        <div>
-          <p class="eyebrow">DEINE SAMMLUNG</p>
-          <h2 id="section-title">Deine Musik</h2>
-          <p id="library-count" class="muted-text">0 Songs in deiner Bibliothek</p>
-        </div>
-        <label class="sort-wrap" for="sort-select">
-          <span>Sortieren:</span>
-          <select id="sort-select">
-            <option value="name">Titel (A–Z)</option>
-            <option value="newest">Neueste zuerst</option>
-            <option value="oldest">Älteste zuerst</option>
-          </select>
-        </label>
-      </div>
-
-      <div class="source-tools">
-        <label for="music-upload" class="upload-button">＋ Songs hinzufügen</label>
-        <input type="file" id="music-upload" accept="audio/*,.mp3,.wav,.ogg,.m4a,.aac,.flac,.opus,.aiff,.wma" multiple hidden>
-        <button type="button" id="google-connect-button" class="drive-button">☁ Mit Google Drive verbinden</button>
-      </div>
-      <p id="upload-status" class="status" role="status" aria-live="polite">Deine Musik wird lokal gespeichert. Google Drive ist optional.</p>
-      <p id="drive-status" class="drive-status" role="status" aria-live="polite">Google-Anmeldung wird vorbereitet …</p>
-
-      <section id="playlist-section" class="playlist-section" aria-labelledby="playlist-heading">
-        <div class="subsection-heading">
-          <h3 id="playlist-heading">Playlists</h3>
+    <section class="music-section" aria-label="Musikbibliothek">
+      <section id="playlist-section" class="playlist-section" aria-labelledby="section-title">
+        <div class="subsection-heading playlist-section-heading">
+          <div>
+            <p class="eyebrow">DEINE SAMMLUNG</p>
+            <h2 id="section-title">Deine Playlists</h2>
+            <p id="library-count" class="muted-text">0 Playlists</p>
+          </div>
+          <button id="create-playlist-button" class="primary-button" type="button" hidden>＋ Playlist erstellen</button>
         </div>
         <div id="playlist-list" class="playlist-grid"></div>
       </section>
 
-      <section id="songs-section" class="songs-section" aria-labelledby="songs-heading">
-        <div class="subsection-heading">
-          <h3 id="songs-heading">Songs</h3>
-          <span class="muted-text">Wähle einen Titel zum Abspielen</span>
+      <section id="songs-section" class="songs-section" aria-labelledby="songs-heading" hidden>
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">MUSIKBIBLIOTHEK</p>
+            <h3 id="songs-heading">Songs</h3>
+            <p class="muted-text">Wähle einen Titel zum Abspielen</p>
+          </div>
+          <label class="sort-wrap" for="sort-select">
+            <span>Sortieren:</span>
+            <select id="sort-select">
+              <option value="name">Titel (A–Z)</option>
+              <option value="newest">Neueste zuerst</option>
+              <option value="oldest">Älteste zuerst</option>
+            </select>
+          </label>
         </div>
         <div id="song-list" class="song-list">
           <div class="empty-music"><span>🎶</span><h3>Noch keine Musik vorhanden</h3><p>Füge deine eigenen Songs hinzu.</p></div>
         </div>
       </section>
+    </section>
 
-      <section class="queue-section" aria-labelledby="queue-heading">
-        <div class="subsection-heading">
-          <h3 id="queue-heading">Als Nächstes</h3>
-          <span class="muted-text">Wiedergabewarteschlange</span>
-        </div>
-        <div id="queue-list" class="queue-list"><p class="queue-empty">Starte einen Song, um die Warteschlange zu füllen.</p></div>
-      </section>
+    <section id="queue-section" class="queue-section" aria-labelledby="queue-heading">
+      <div class="subsection-heading">
+        <h3 id="queue-heading">Als Nächstes</h3>
+        <span class="muted-text">Wiedergabewarteschlange</span>
+      </div>
+      <div id="queue-list" class="queue-list"><p class="queue-empty">Starte einen Song, um die Warteschlange zu füllen.</p></div>
+    </section>
+
+    <section id="home-actions-section" class="home-actions" aria-labelledby="home-actions-heading" hidden>
+      <div class="home-actions-heading">
+        <p class="eyebrow">DEINE MUSIK</p>
+        <h2 id="home-actions-heading">Musik hinzufügen</h2>
+        <p class="muted-text">Füge neue Songs zu deiner lokalen Bibliothek hinzu oder verbinde Google Drive.</p>
+      </div>
+      <div class="source-tools">
+        <label for="music-upload" class="upload-button">＋ Songs hinzufügen</label>
+        <input type="file" id="music-upload" accept="audio/*,.mp3,.wav,.ogg,.m4a,.aac,.flac,.opus,.aiff,.wma" multiple hidden>
+        <button type="button" id="google-connect-button" class="drive-button" hidden>☁ Mit Google Drive verbinden</button>
+        <button type="button" id="drive-sync-button" class="drive-sync-button" aria-label="Google Drive verbinden oder synchronisieren" title="Google Drive verbinden oder synchronisieren" hidden>
+          <span class="drive-sync-icon" aria-hidden="true">↻</span>
+          <span class="drive-sync-label">Google Drive</span>
+        </button>
+      </div>
+      <p id="upload-status" class="status" role="status" aria-live="polite">Deine Musik wird lokal gespeichert. Google Drive ist optional.</p>
+      <p id="drive-status" class="drive-status" role="status" aria-live="polite">Google-Anmeldung wird vorbereitet …</p>
     </section>
 
     <footer class="app-footer">
       <p>MySpotify speichert deine Musik in diesem Browser. Google Drive synchronisiert deine Bibliothek optional zwischen deinen eigenen Geräten.</p>
     </footer>
   </main>
+
+  <dialog id="drive-choice-dialog" class="drive-choice-dialog" aria-labelledby="drive-choice-title">
+    <div class="drive-choice-panel">
+      <div class="drive-choice-symbol" aria-hidden="true">☁</div>
+      <p class="eyebrow">WILLKOMMEN BEI MYSPOTIFY</p>
+      <h2 id="drive-choice-title">Wie möchtest du MySpotify nutzen?</h2>
+      <p class="drive-choice-copy">Verbinde Google Drive, um deine Musikbibliothek zwischen deinen Geräten zu synchronisieren, oder nutze MySpotify zunächst nur lokal auf diesem Gerät.</p>
+      <div class="drive-choice-actions">
+        <button id="drive-choice-connect" class="primary-button" type="button">☁ Mit Google Drive verbinden</button>
+        <button id="drive-choice-local" class="secondary-button" type="button">Lokal bleiben</button>
+      </div>
+      <p id="drive-choice-status" class="drive-choice-status" role="status" aria-live="polite"></p>
+    </div>
+  </dialog>
 
   <dialog id="playlist-picker-dialog" class="playlist-picker-dialog" aria-labelledby="playlist-picker-title">
     <div class="playlist-picker-panel">
@@ -163,7 +187,7 @@
 
   <!-- App-Start mit expliziter Fehlerdiagnose für dynamische ES-Modul-Imports. -->
   <script type="module">
-    const appVersion = "2.3.0";
+    const appVersion = "2.4.0";
     const appStatus = document.getElementById("upload-status");
     const driveStatus = document.getElementById("drive-status");
     const driveButton = document.getElementById("google-connect-button");

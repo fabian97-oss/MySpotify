@@ -45,13 +45,41 @@ test("Song aus geöffneter Playlist entfernen löscht ihn nicht aus der Biblioth
   assert.match(app, /Aus Playlist entfernen/);
 });
 
-test("Start blendet die vollständige Songliste aus; Suche zeigt sie", async () => {
+test("Start zeigt Playlist-Kacheln zuerst und Songs hinzufügen am Seitenende", async () => {
   const [app, html] = await Promise.all([read("js/app.js"), read("index.html")]);
   assert.match(app, /let activeSection = "home"/);
-  assert.match(app, /const songsVisible = activeSection === "search" \|\| Boolean\(activePlaylistId\) \|\| currentView === "favorites"/);
-  assert.match(app, /songsSection\.hidden = !songsVisible/);
-  assert.match(app, /activeSection = "search";[\s\S]{0,100}renderAll\(\);[\s\S]{0,80}searchInput\.focus\(\)/);
+  assert.match(app, /const songsVisible = search \|\| \(library && \(Boolean\(activePlaylistId\) \|\| currentView === "favorites"\)\)/);
+  assert.match(app, /byId\("songs-section"\)\.hidden = !songsVisible/);
+  assert.match(app, /byId\("welcome-section"\)\.hidden = home/);
+  assert.match(app, /byId\("home-actions-section"\)\.hidden = !home/);
+  assert.ok(html.indexOf('id="playlist-section"') < html.indexOf('id="home-actions-section"'));
+  assert.ok(html.indexOf('id="playlist-section"') < html.indexOf('id="music-upload"'));
   assert.match(html, /id="nav-home"/);
   assert.match(html, /id="nav-search"/);
   assert.match(html, /id="nav-library"/);
+});
+
+test("Playlist-Erstellung ist in der Mediathek und nicht im Start-Header", async () => {
+  const [app, html] = await Promise.all([read("js/app.js"), read("index.html")]);
+  assert.match(html, /id="create-playlist-button"[^>]+hidden/);
+  assert.match(app, /byId\("create-playlist-button"\)\.hidden = !library/);
+});
+
+test("Erster App-Start fragt nach Google Drive oder lokalem Modus", async () => {
+  const [app, html] = await Promise.all([read("js/app.js"), read("index.html")]);
+  assert.match(html, /id="drive-choice-dialog"/);
+  assert.match(html, /id="drive-choice-connect"/);
+  assert.match(html, /id="drive-choice-local"/);
+  assert.match(app, /const DRIVE_CHOICE_KEY = "myspotify-drive-choice-v1"/);
+  assert.match(app, /if \(!choice && dialog && !dialog\.open\) dialog\.showModal\(\)/);
+  assert.match(app, /saveDriveChoice\("local"\)/);
+});
+
+test("Nach erfolgreicher Google-Verbindung wird der Textbutton durch das Sync-Symbol ersetzt", async () => {
+  const [app, drive, html] = await Promise.all([read("js/app.js"), read("js/google-drive.js"), read("index.html")]);
+  assert.match(html, /id="google-connect-button"[^>]+hidden/);
+  assert.match(html, /id="drive-sync-button"[^>]+hidden/);
+  assert.match(drive, /myspotify-drive-connected/);
+  assert.match(app, /window\.addEventListener\("myspotify-drive-connected"/);
+  assert.match(app, /updateDriveControls\("connected"\)/);
 });

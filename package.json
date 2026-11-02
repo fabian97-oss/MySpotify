@@ -1,9 +1,9 @@
 {
   "name": "myspotify-personal-library",
-  "version": "2.3.0",
+  "version": "2.4.0",
   "private": true,
   "type": "module",
-  "description": "Persönlicher Musikplayer mit Playlistsuche und optionaler Google-Drive-Synchronisierung",
+  "description": "Persönlicher Musikplayer mit Startseite, Mediathek, Playlists und optionaler Google-Drive-Synchronisierung",
   "scripts": {
     "test": "node --test"
   }

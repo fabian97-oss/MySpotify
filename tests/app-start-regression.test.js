@@ -17,17 +17,17 @@ test("Google Drive erhält einen definierten Song-Accessor", async () => {
   assert.match(app, /getStoredSongs\s*,/);
 });
 
-test("App- und Modul-Cache-Buster stehen auf Version 2.3.0", async () => {
+test("App- und Modul-Cache-Buster stehen auf Version 2.4.0", async () => {
   const [html, app, drive, worker] = await Promise.all([
     readFile(new URL("index.html", root), "utf8"),
     readFile(new URL("js/app.js", root), "utf8"),
     readFile(new URL("js/google-drive.js", root), "utf8"),
     readFile(new URL("sw.js", root), "utf8")
   ]);
-  assert.match(html, /const appVersion = "2\.3\.0"/);
-  assert.match(app, /google-drive\.js\?v=2\.3\.0/);
-  assert.match(drive, /metadata\.js\?v=2\.3\.0/);
-  assert.match(worker, /myspotify-v10/);
+  assert.match(html, /const appVersion = "2\.4\.0"/);
+  assert.match(app, /google-drive\.js\?v=2\.4\.0/);
+  assert.match(drive, /metadata\.js\?v=2\.4\.0/);
+  assert.match(worker, /myspotify-v11/);
   assert.doesNotMatch(worker, /v=2\.2\.1/);
 });
 

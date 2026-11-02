@@ -1,4 +1,4 @@
-import {mergeMetadata} from "./metadata.js?v=2.3.0";
+import {mergeMetadata} from "./metadata.js?v=2.4.0";
 
 const GOOGLE_CLIENT_ID = "549476284025-chhtts628n343481h3ipoomikrkmem2q.apps.googleusercontent.com";
 const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";
@@ -127,6 +127,7 @@ export function createGoogleDrive({
           return;
         }
         accessToken = response.access_token;
+        window.dispatchEvent(new CustomEvent("myspotify-drive-connected"));
         pending.resolve(accessToken);
       },
       error_callback: error => {
@@ -170,7 +171,8 @@ export function createGoogleDrive({
       // Deshalb keinen unerwarteten Popup-Dialog aus einem Hintergrund-Sync öffnen.
       accessToken = null;
       setButtonConnected(false);
-      throw new Error("Deine Google-Sitzung ist abgelaufen. Bitte klicke erneut auf „Mit Google Drive verbinden“.");
+      window.dispatchEvent(new CustomEvent("myspotify-drive-session-expired"));
+      throw new Error("Deine Google-Sitzung ist abgelaufen. Tippe auf das Synchronisationssymbol, um die Verbindung zu erneuern.");
     }
     return response;
   }

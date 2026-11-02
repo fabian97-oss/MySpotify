@@ -153,3 +153,13 @@ In der Konsole sind zusätzlich `window.MySpotifyBoot` und nach erfolgreichem St
 - Stellt `getStoredSongs()` als asynchronen IndexedDB-Zugriff für den Drive-Abgleich bereit.
 - Der App-Bootstrap wartet jetzt auch auf die abgeschlossene IndexedDB-Initialisierung und das Binden der UI-Events, bevor er die App als bereit meldet.
 - Es werden keine IndexedDB-Daten gelöscht oder migriert; vorhandene lokale Songs bleiben unverändert.
+
+
+## Version 2.4.0
+
+- Startseite zeigt die Playlist-Kacheln direkt im oberen Bereich.
+- Playlist-Erstellung befindet sich in der Mediathek.
+- Song-Upload befindet sich am unteren Ende der Startseite.
+- Beim ersten Start erscheint eine Auswahl zwischen Google Drive und lokaler Nutzung.
+- Die Auswahl wird lokal im Browser gemerkt. Nach erfolgreicher Verbindung ersetzt ein Synchronisationssymbol den Textbutton.
+- Hinweis: Die aktuelle Google-Identity-Token-Verbindung ist weiterhin sitzungsgebunden. Ein gespeicherter Cloud-Wunsch ersetzt noch keine serverseitige Refresh-Token-Verwaltung; diese wird separat mit Cloudflare umgesetzt.
