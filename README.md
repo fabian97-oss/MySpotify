@@ -165,11 +165,20 @@ In der Konsole sind zusätzlich `window.MySpotifyBoot` und nach erfolgreichem St
 - Hinweis: Die aktuelle Google-Identity-Token-Verbindung ist weiterhin sitzungsgebunden. Ein gespeicherter Cloud-Wunsch ersetzt noch keine serverseitige Refresh-Token-Verwaltung; diese wird separat mit Cloudflare umgesetzt.
 
 
-## Version 2.5.0
+## Version 2.5.1
 
 - Playlist-Kacheln sind vollständig anklickbar: Cover und Name öffnen die Playlist.
 - Playlists werden als responsives Grid angezeigt.
 - Umbenennen, Cover ändern und Löschen befinden sich ausschließlich in der geöffneten Playlist-Detailansicht.
 - Die Detailansicht hat eine Zurück-Schaltfläche zur Playlist-Übersicht.
 - Playlist-Datenstruktur und IndexedDB-Schema bleiben unverändert.
-- Service-Worker-Cache auf `myspotify-v12` aktualisiert.
+- Service-Worker-Cache auf `myspotify-v13` aktualisiert.
+
+
+## Version 2.5.1
+
+- Playlist-Grid zeigt nur noch Cover und Namen; Songanzahlen sind aus den Kacheln entfernt.
+- Cover und Name befinden sich gemeinsam in einer großen Schaltfläche und öffnen dieselbe Playlist.
+- Verwaltungsaktionen (Umbenennen, Cover ändern, Löschen) bleiben ausschließlich in der geöffneten Playlist-Detailansicht.
+- Playlist-Datenstruktur und IndexedDB-Schema bleiben unverändert.
+- Service-Worker-Cache auf `myspotify-v13` aktualisiert.

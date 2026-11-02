@@ -1,6 +1,6 @@
 {
   "name": "myspotify-personal-library",
-  "version": "2.5.0",
+  "version": "2.5.1",
   "private": true,
   "type": "module",
   "description": "Persönlicher Musikplayer mit anklickbaren Playlist-Kacheln und Playlist-Detailansicht",

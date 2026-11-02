@@ -80,7 +80,6 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
 .playlist-placeholder.favorite-placeholder { color: #ff7290; }
 .playlist-details { min-width: 0; flex: 1; }
 .playlist-details strong { display: block; overflow-wrap: anywhere; font-size: 13px; }
-.playlist-count { display: block; color: var(--muted); font-size: 11px; margin-top: 4px; }
 .playlist-actions { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
 .small-button { padding: 6px 8px; color: #eee; background: #373737; border: 0; border-radius: 15px; font-size: 10px; }
 .small-button:hover, .compact-action:hover { background: #4a4a4a; }
@@ -210,7 +209,7 @@ input[type="range"] { accent-color: var(--green); cursor: pointer; }
 .drive-button[aria-busy="true"] { opacity: .75; cursor: progress; }
 
 
-/* MySpotify 2.5.0: Startseite, Mediathek und Drive-Auswahl */
+/* MySpotify 2.5.1: Startseite, Mediathek und Drive-Auswahl */
 .songs-section[hidden],
 .playlist-section[hidden],
 .search-wrap[hidden],
@@ -391,7 +390,7 @@ input[type="range"] { accent-color: var(--green); cursor: pointer; }
 }
 
 
-/* MySpotify 2.5.0 – Startseite und Google-Drive-Auswahl */
+/* MySpotify 2.5.1 – Startseite und Google-Drive-Auswahl */
 [hidden] { display: none !important; }
 .welcome-section[hidden],
 .library-tools[hidden],
@@ -484,7 +483,7 @@ input[type="range"] { accent-color: var(--green); cursor: pointer; }
 }
 
 
-/* MySpotify 2.5.0 – anklickbare Playlist-Kacheln und Detailaktionen */
+/* MySpotify 2.5.1 – minimalistisches Playlist-Grid und Detailaktionen */
 .playlist-grid {
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap: 16px;
@@ -567,9 +566,6 @@ input[type="range"] { accent-color: var(--green); cursor: pointer; }
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 13px;
-}
-.playlist-card .playlist-count {
-  margin-top: 5px;
 }
 .playlist-header-actions {
   display: flex;

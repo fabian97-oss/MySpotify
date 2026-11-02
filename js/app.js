@@ -1,13 +1,13 @@
 import {
   openDatabase, dbRequest, getSongs, addSong, putSong, removeSong,
   getOrCreateDeviceId
-} from "./database.js?v=2.5.0";
+} from "./database.js?v=2.5.1";
 import {
   normalizeMetadata, mergeMetadata, migrateSongMetadata,
   setFavoriteState, setCoverState
-} from "./metadata.js?v=2.5.0";
-import {MusicPlayer} from "./player.js?v=2.5.0";
-import {createGoogleDrive} from "./google-drive.js?v=2.5.0";
+} from "./metadata.js?v=2.5.1";
+import {MusicPlayer} from "./player.js?v=2.5.1";
+import {createGoogleDrive} from "./google-drive.js?v=2.5.1";
 
 const audio = document.getElementById("audio-player");
 const uploadInput = document.getElementById("music-upload");
@@ -280,7 +280,7 @@ function openFavorites() {
   window.scrollTo({top: 0, behavior: "smooth"});
 }
 
-function createPlaylistCard({id, name, count, cover, favorite = false, selected = false}) {
+function createPlaylistCard({id, name, cover, favorite = false, selected = false}) {
   const card = document.createElement("article");
   card.className = `playlist-card${selected ? " selected" : ""}`;
   if (id) card.dataset.playlistId = id;
@@ -306,10 +306,9 @@ function createPlaylistCard({id, name, count, cover, favorite = false, selected 
   details.className = "playlist-details";
   const title = document.createElement("strong");
   title.textContent = name;
-  const songCount = document.createElement("span");
-  songCount.className = "playlist-count";
-  songCount.textContent = `${count} Songs`;
-  details.append(title, songCount);
+  // Das Grid zeigt bewusst nur Cover und Playlistname.
+  // Songanzahl und Verwaltungsaktionen erscheinen erst in der geöffneten Playlist.
+  details.append(title);
   openButton.append(artwork, details);
   openButton.addEventListener("click", () => favorite ? openFavorites() : openPlaylist(id));
   card.appendChild(openButton);
@@ -325,7 +324,6 @@ function renderPlaylists() {
   if (showFavoritesCard) {
     playlistList.appendChild(createPlaylistCard({
       name: "Meine Favoriten",
-      count: metadata.favorites.length,
       favorite: true,
       selected: currentView === "favorites" && activeSection === "library"
     }));
@@ -335,7 +333,6 @@ function renderPlaylists() {
     playlistList.appendChild(createPlaylistCard({
       id: playlist.id,
       name: playlist.name,
-      count: playlist.songIds.length,
       cover: playlist.cover,
       selected: activePlaylistId === playlist.id
     }));

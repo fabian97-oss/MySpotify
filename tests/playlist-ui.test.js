@@ -90,7 +90,19 @@ test("Playlist-Cover und Name öffnen dieselbe Playlist über eine große Kachel
   const createCard = app.slice(app.indexOf("function createPlaylistCard"), app.indexOf("function renderPlaylists"));
   assert.match(createCard, /openButton\.className = "playlist-card-open"/);
   assert.match(createCard, /artwork\.appendChild\(image\)/);
-  assert.match(createCard, /details\.append\(title, songCount\)/);
+  assert.match(createCard, /details\.append\(title\)/);
+  assert.doesNotMatch(createCard, /playlist-count|songCount|Songs`/);
+  assert.match(createCard, /openButton\.append\(artwork, details\)/);
+  assert.match(createCard, /openButton\.addEventListener\("click"[\s\S]*?openPlaylist\(id\)/);
+});
+
+test("Playlist-Grid zeigt ausschließlich Cover und Namen, ohne Songanzahl", async () => {
+  const app = await read("js/app.js");
+  const createCard = app.slice(app.indexOf("function createPlaylistCard"), app.indexOf("function renderPlaylists"));
+  assert.match(createCard, /artwork\.appendChild\(image\)/);
+  assert.match(createCard, /title\.textContent = name/);
+  assert.match(createCard, /details\.append\(title\)/);
+  assert.doesNotMatch(createCard, /playlist-count|songCount|count} Songs/);
   assert.match(createCard, /openButton\.append\(artwork, details\)/);
   assert.match(createCard, /openButton\.addEventListener\("click"[\s\S]*?openPlaylist\(id\)/);
 });

@@ -7,18 +7,18 @@
 <p>Diese Seite prüft die veröffentlichten Dateien direkt. Sie startet den Player nicht und verändert keine lokale Musik oder IndexedDB.</p>
 <div id="summary">Prüfung läuft …</div><button id="run" type="button">Erneut prüfen</button>
 <table><thead><tr><th>Datei</th><th>HTTP</th><th>Content-Type</th><th>Ergebnis</th></tr></thead><tbody id="rows"></tbody></table>
-<p class="small">Versionskennung: 2.5.0 · Browser-Ursprung: <code id="origin"></code></p>
+<p class="small">Versionskennung: 2.5.1 · Browser-Ursprung: <code id="origin"></code></p>
 <script>
 const files=[
   {path:"./index.html",kind:"html",need:"google-connect-button"},
-  {path:"./manifest.json?v=2.5.0",kind:"json",need:"name"},
+  {path:"./manifest.json?v=2.5.1",kind:"json",need:"name"},
   {path:"./sw.js",kind:"js",need:"self.addEventListener"},
-  {path:"./style.css?v=2.5.0",kind:"css",need:":root"},
-  {path:"./js/app.js?v=2.5.0",kind:"js",need:"createGoogleDrive"},
-  {path:"./js/google-drive.js?v=2.5.0",kind:"js",need:"export function createGoogleDrive"},
-  {path:"./js/database.js?v=2.5.0",kind:"js",need:"openDatabase"},
-  {path:"./js/metadata.js?v=2.5.0",kind:"js",need:"mergeMetadata"},
-  {path:"./js/player.js?v=2.5.0",kind:"js",need:"MusicPlayer"}
+  {path:"./style.css?v=2.5.1",kind:"css",need:":root"},
+  {path:"./js/app.js?v=2.5.1",kind:"js",need:"createGoogleDrive"},
+  {path:"./js/google-drive.js?v=2.5.1",kind:"js",need:"export function createGoogleDrive"},
+  {path:"./js/database.js?v=2.5.1",kind:"js",need:"openDatabase"},
+  {path:"./js/metadata.js?v=2.5.1",kind:"js",need:"mergeMetadata"},
+  {path:"./js/player.js?v=2.5.1",kind:"js",need:"MusicPlayer"}
 ];
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 async function run(){const rows=document.getElementById("rows");rows.replaceChildren();let bad=0;
