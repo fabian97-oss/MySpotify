@@ -608,3 +608,33 @@ input[type="range"] { accent-color: var(--green); cursor: pointer; }
   .playlist-detail-actions { width: 100%; justify-content: flex-start; }
   .playlist-detail-actions .small-button { flex: 1 1 auto; }
 }
+
+
+/* MySpotify 2.5.2 – Playlist in echter Zufallsreihenfolge starten */
+.playlist-detail-actions .playlist-shuffle-button {
+  min-height: 36px;
+  padding: 8px 14px;
+  color: #07150c;
+  border: 0;
+  border-radius: 20px;
+  background: var(--green);
+  font-size: 11px;
+  font-weight: 750;
+  cursor: pointer;
+  transition: background .18s ease, transform .18s ease;
+}
+.playlist-detail-actions .playlist-shuffle-button:hover:not(:disabled) {
+  background: #51ed87;
+  transform: translateY(-1px);
+}
+.playlist-detail-actions .playlist-shuffle-button:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+.playlist-detail-actions .playlist-shuffle-button[aria-busy="true"] {
+  opacity: .7;
+  cursor: wait;
+}
+@media (max-width: 560px) {
+  .playlist-detail-actions .playlist-shuffle-button { flex: 1 1 100%; }
+}

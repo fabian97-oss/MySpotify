@@ -165,7 +165,7 @@ In der Konsole sind zusätzlich `window.MySpotifyBoot` und nach erfolgreichem St
 - Hinweis: Die aktuelle Google-Identity-Token-Verbindung ist weiterhin sitzungsgebunden. Ein gespeicherter Cloud-Wunsch ersetzt noch keine serverseitige Refresh-Token-Verwaltung; diese wird separat mit Cloudflare umgesetzt.
 
 
-## Version 2.5.1
+## Version 2.5.2
 
 - Playlist-Kacheln sind vollständig anklickbar: Cover und Name öffnen die Playlist.
 - Playlists werden als responsives Grid angezeigt.
@@ -175,10 +175,26 @@ In der Konsole sind zusätzlich `window.MySpotifyBoot` und nach erfolgreichem St
 - Service-Worker-Cache auf `myspotify-v13` aktualisiert.
 
 
-## Version 2.5.1
+## Version 2.5.2
 
 - Playlist-Grid zeigt nur noch Cover und Namen; Songanzahlen sind aus den Kacheln entfernt.
 - Cover und Name befinden sich gemeinsam in einer großen Schaltfläche und öffnen dieselbe Playlist.
 - Verwaltungsaktionen (Umbenennen, Cover ändern, Löschen) bleiben ausschließlich in der geöffneten Playlist-Detailansicht.
 - Playlist-Datenstruktur und IndexedDB-Schema bleiben unverändert.
 - Service-Worker-Cache auf `myspotify-v13` aktualisiert.
+
+
+## MySpotify 2.5.2
+
+- Playlist-Detailansicht enthält einen eigenen Shuffle-Button.
+- Playlist-Shuffle verwendet Fisher-Yates mit Web Crypto (`crypto.getRandomValues`) und Rejection Sampling, statt Titel nach einem zufälligen Sortierwert zu sortieren.
+- Die zufällig erzeugte Reihenfolge ist die Wiedergabe-Queue; jeder Titel wird pro Durchlauf genau einmal berücksichtigt.
+- Die ursprüngliche Playlist-Reihenfolge bleibt intern erhalten und wird nicht in IndexedDB/Metadaten umgeschrieben.
+
+
+## MySpotify 2.5.2 – Playlist Shuffle
+
+- In der geöffneten Playlist gibt es die Aktion „Playlist mischen“.
+- Das Mischen verwendet Fisher-Yates mit Web Crypto und Rejection Sampling (gleichverteilte Auswahl ohne Modulo-Bias).
+- Die Wiedergabe startet mit dem ersten zufällig gezogenen Titel; die restlichen Titel laufen in genau dieser Queue-Reihenfolge und ohne Duplikate.
+- Die gespeicherte Playlist-Reihenfolge wird nicht verändert. Der globale Shuffle-Schalter kann zur ursprünglichen Reihenfolge zurückkehren.

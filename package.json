@@ -1,9 +1,9 @@
 {
   "name": "myspotify-personal-library",
-  "version": "2.5.1",
+  "version": "2.5.2",
   "private": true,
   "type": "module",
-  "description": "Persönlicher Musikplayer mit anklickbaren Playlist-Kacheln und Playlist-Detailansicht",
+  "description": "Persönlicher Musikplayer mit Playlist-Grid, Detailansicht und echter Playlist-Zufallswiedergabe",
   "scripts": {
     "test": "node --test"
   }
