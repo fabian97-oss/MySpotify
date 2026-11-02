@@ -1,13 +1,13 @@
 import {
   openDatabase, dbRequest, getSongs, addSong, putSong, removeSong,
   getOrCreateDeviceId
-} from "./database.js?v=2.5.1";
+} from "./database.js?v=2.5.2";
 import {
   normalizeMetadata, mergeMetadata, migrateSongMetadata,
   setFavoriteState, setCoverState
-} from "./metadata.js?v=2.5.1";
-import {MusicPlayer} from "./player.js?v=2.5.1";
-import {createGoogleDrive} from "./google-drive.js?v=2.5.1";
+} from "./metadata.js?v=2.5.2";
+import {MusicPlayer} from "./player.js?v=2.5.2";
+import {createGoogleDrive} from "./google-drive.js?v=2.5.2";
 
 const audio = document.getElementById("audio-player");
 const uploadInput = document.getElementById("music-upload");
@@ -380,6 +380,42 @@ async function changeActivePlaylistCover() {
   }
 }
 
+async function shuffleActivePlaylist() {
+  const playlist = metadata.playlists.find(item => item.id === activePlaylistId);
+  if (!playlist || !player) return;
+
+  // Playlist.songIds speichert songKey()-Werte, nicht die internen DB-IDs.
+  // Die Map bewahrt daher exakt die Reihenfolge der Playlist als Ausgangsbasis.
+  const songsByKey = new Map(songs.map(song => [songKey(song), song]));
+  const playlistSongs = playlist.songIds.map(key => songsByKey.get(key)).filter(Boolean);
+  if (!playlistSongs.length) {
+    setStatus(`„${playlist.name}“ enthält keine abspielbaren Songs.`);
+    return;
+  }
+
+  const button = byId("playlist-shuffle-button");
+  if (button) {
+    button.disabled = true;
+    button.setAttribute("aria-busy", "true");
+  }
+  try {
+    const shuffledIds = await player.shufflePlaylist(playlistSongs);
+    if (!shuffledIds) {
+      setStatus(`„${playlist.name}“ enthält keine abspielbaren Songs.`);
+      return;
+    }
+    setStatus(`Zufallswiedergabe für „${playlist.name}“ gestartet (${shuffledIds.length} Songs).`);
+  } catch (error) {
+    console.error("Playlist konnte nicht zufällig gestartet werden:", error);
+    setStatus(`Shuffle fehlgeschlagen: ${error.message}`);
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.removeAttribute("aria-busy");
+    }
+  }
+}
+
 async function deleteActivePlaylist() {
   const playlist = metadata.playlists.find(item => item.id === activePlaylistId);
   if (!playlist) return;
@@ -707,6 +743,16 @@ function renderAll() {
   playlistList.hidden = playlistDetailOpen;
   byId("playlist-back-button").hidden = !playlistDetailOpen;
   byId("playlist-detail-actions").hidden = !library || !activePlaylist;
+  const playlistShuffleButton = byId("playlist-shuffle-button");
+  if (playlistShuffleButton) {
+    const playableCount = activePlaylist
+      ? activePlaylist.songIds.filter(key => songs.some(song => songKey(song) === key)).length
+      : 0;
+    playlistShuffleButton.disabled = playableCount === 0;
+    playlistShuffleButton.title = playableCount
+      ? `${playableCount} Songs in zufälliger Reihenfolge abspielen`
+      : "Diese Playlist enthält keine abspielbaren Songs";
+  }
   byId("create-playlist-button").hidden = !library || playlistDetailOpen;
   byId("home-actions-section").hidden = !home;
 
@@ -868,6 +914,7 @@ function bindEvents() {
   uploadInput.addEventListener("change", handleUploads);
   byId("create-playlist-button").addEventListener("click", createPlaylist);
   byId("playlist-back-button").addEventListener("click", closePlaylistDetail);
+  byId("playlist-shuffle-button").addEventListener("click", shuffleActivePlaylist);
   byId("playlist-rename-button").addEventListener("click", renameActivePlaylist);
   byId("playlist-cover-button").addEventListener("click", changeActivePlaylistCover);
   byId("playlist-delete-button").addEventListener("click", deleteActivePlaylist);

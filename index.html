@@ -11,8 +11,8 @@
   <title>MySpotify – Deine Musik</title>
   <link rel="icon" type="image/png" href="./assets/images/icon.png">
   <link rel="apple-touch-icon" href="./assets/images/icon.png">
-  <link rel="manifest" href="./manifest.json?v=2.5.1">
-  <link rel="stylesheet" href="./style.css?v=2.5.1">
+  <link rel="manifest" href="./manifest.json?v=2.5.2">
+  <link rel="stylesheet" href="./style.css?v=2.5.2">
 </head>
 <body>
   <header class="header">
@@ -57,6 +57,7 @@
           <div class="playlist-header-actions">
             <button id="playlist-back-button" class="secondary-button" type="button" hidden>← Alle Playlists</button>
             <div id="playlist-detail-actions" class="playlist-detail-actions" hidden>
+              <button id="playlist-shuffle-button" class="playlist-shuffle-button" type="button" aria-label="Diese Playlist in zufälliger Reihenfolge abspielen" title="Diese Playlist wirklich zufällig mischen">⤨ Playlist mischen</button>
               <button id="playlist-rename-button" class="small-button" type="button">Umbenennen</button>
               <button id="playlist-cover-button" class="small-button" type="button">Cover ändern</button>
               <button id="playlist-delete-button" class="small-button danger-button" type="button">Playlist löschen</button>
@@ -195,7 +196,7 @@
 
   <!-- App-Start mit expliziter Fehlerdiagnose für dynamische ES-Modul-Imports. -->
   <script type="module">
-    const appVersion = "2.5.1";
+    const appVersion = "2.5.2";
     const appStatus = document.getElementById("upload-status");
     const driveStatus = document.getElementById("drive-status");
     const driveButton = document.getElementById("google-connect-button");

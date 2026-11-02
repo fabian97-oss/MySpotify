@@ -81,3 +81,53 @@ test("Einzelne Queue-Einträge lassen sich entfernen, ohne sie aus der Bibliothe
   assert.deepEqual(player.getUpcomingSongs().map(song => song.id), [2, 4]);
   assert.equal(player.removeQueuedSong(1), false, "aktueller Song bleibt ausgewählt");
 });
+
+
+test("Playlist-Shuffle erzeugt eine echte Fisher-Yates-Permutation und startet den ersten Zufallstitel", async () => {
+  const {player, songs} = createPlayer();
+  const choices = [0, 0, 0];
+  player.randomInt = maxExclusive => {
+    const choice = choices.shift();
+    assert.ok(choice >= 0 && choice < maxExclusive);
+    return choice;
+  };
+
+  const order = await player.shufflePlaylist(songs);
+  assert.deepEqual(order, [2, 3, 4, 1]);
+  assert.deepEqual(player.sourceQueueIds, [1, 2, 3, 4], "ursprüngliche Playlist-Reihenfolge bleibt erhalten");
+  assert.deepEqual(player.queueIds, [2, 3, 4, 1]);
+  assert.equal(player.currentSongId, 2, "der erste zufällig gezogene Song startet sofort");
+  assert.equal(player.shuffle, true);
+  await player.next();
+  assert.equal(player.currentSongId, 3, "Nächster Song folgt der gemischten Queue");
+});
+
+test("Fisher-Yates kann jede der 24 Permutationen von vier Songs genau einmal erzeugen", async () => {
+  const {fisherYatesShuffle} = await import("../js/player.js");
+  const permutations = new Set();
+
+  for (let first = 0; first < 4; first += 1) {
+    for (let second = 0; second < 3; second += 1) {
+      for (let third = 0; third < 2; third += 1) {
+        const choices = [first, second, third];
+        const shuffled = fisherYatesShuffle([1, 2, 3, 4], maxExclusive => {
+          const choice = choices.shift();
+          assert.ok(choice >= 0 && choice < maxExclusive);
+          return choice;
+        });
+        permutations.add(shuffled.join(","));
+      }
+    }
+  }
+
+  assert.equal(permutations.size, 24, "alle möglichen Reihenfolgen sind erreichbar");
+});
+
+test("Playlist-Shuffle ignoriert fehlende und doppelte Einträge und bricht bei leerer Liste ab", async () => {
+  const {player, songs} = createPlayer();
+  const result = await player.shufflePlaylist([songs[0], songs[0], null, {id: 99}]);
+  assert.equal(result.length, 1);
+  assert.deepEqual(new Set(result), new Set([1]));
+  const empty = await player.shufflePlaylist([null, {id: 99}]);
+  assert.equal(empty, false);
+});

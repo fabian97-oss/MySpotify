@@ -1,6 +1,45 @@
+
+/**
+ * Liefert einen gleichverteilten Integer im Bereich [0, maxExclusive).
+ * Web Crypto wird bevorzugt; Rejection Sampling vermeidet Modulo-Bias.
+ */
+function secureRandomInt(maxExclusive) {
+  if (!Number.isInteger(maxExclusive) || maxExclusive < 1 || maxExclusive > 0x100000000) {
+    throw new RangeError("maxExclusive muss eine ganze Zahl zwischen 1 und 2^32 sein.");
+  }
+  if (maxExclusive === 1) return 0;
+
+  const cryptoApi = globalThis.crypto;
+  if (typeof cryptoApi?.getRandomValues === "function") {
+    const uint32Range = 0x100000000;
+    const limit = Math.floor(uint32Range / maxExclusive) * maxExclusive;
+    const buffer = new Uint32Array(1);
+    let value;
+    do {
+      cryptoApi.getRandomValues(buffer);
+      value = buffer[0];
+    } while (value >= limit);
+    return value % maxExclusive;
+  }
+
+  // Nur für Umgebungen ohne Web Crypto (z. B. ältere Testumgebungen).
+  return Math.floor(Math.random() * maxExclusive);
+}
+
+/** Gleichverteilte Fisher-Yates-Permutation – keine zufällige Sortierfunktion. */
+export function fisherYatesShuffle(items, randomInt = secureRandomInt) {
+  const result = [...items];
+  for (let index = result.length - 1; index > 0; index -= 1) {
+    const swapIndex = randomInt(index + 1);
+    [result[index], result[swapIndex]] = [result[swapIndex], result[index]];
+  }
+  return result;
+}
+
 export class MusicPlayer {
-  constructor(audio, getSongById, onChange = () => {}, onQueueChange = () => {}) {
+  constructor(audio, getSongById, onChange = () => {}, onQueueChange = () => {}, randomInt = secureRandomInt) {
     this.audio = audio;
+    this.randomInt = randomInt;
     this.getSongById = getSongById;
     this.onChange = onChange;
     this.onQueueChange = onQueueChange;
@@ -114,13 +153,33 @@ export class MusicPlayer {
     this.notifyQueue();
   }
 
+  /**
+   * Startet eine ganze Playlist in einer neu gezogenen Zufallsreihenfolge.
+   * sourceQueueIds behält die ursprüngliche Playlist-Reihenfolge, damit der
+   * globale Shuffle-Schalter die Reihenfolge später wiederherstellen kann.
+   */
+  async shufflePlaylist(songs) {
+    const ids = [...new Set((Array.isArray(songs) ? songs : [])
+      .filter(song => song && song.id != null && this.getSongById(song.id))
+      .map(song => song.id))];
+    if (!ids.length) return false;
+
+    this.sourceQueueIds = [...ids];
+    this.queueIds = fisherYatesShuffle(ids, this.randomInt);
+    this.shuffle = true;
+    this.queueIndex = -1;
+
+    // Den ersten zufällig gezogenen Titel sofort starten; alle übrigen folgen
+    // exakt einmal in derselben zufälligen Queue-Reihenfolge.
+    await this.playById(this.queueIds[0]);
+    this.notifyQueue();
+    return [...this.queueIds];
+  }
+
   applyShuffle(currentId) {
     const remaining = this.sourceQueueIds.filter(id => id !== currentId);
-    for (let i = remaining.length - 1; i > 0; i -= 1) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [remaining[i], remaining[j]] = [remaining[j], remaining[i]];
-    }
-    this.queueIds = currentId ? [currentId, ...remaining] : remaining;
+    const shuffled = fisherYatesShuffle(remaining, this.randomInt);
+    this.queueIds = currentId ? [currentId, ...shuffled] : shuffled;
     this.queueIndex = currentId ? 0 : -1;
   }
 
